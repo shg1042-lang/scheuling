@@ -1,0 +1,1361 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>방과후 스케줄러</title>
+<style>
+:root{
+  --bg:#f5f3ee; --surface:#ffffff; --surface2:#f1efe9; --text:#1e2126; --muted:#686c74; --line:#e2dfd6;
+  --accent:#2d6bd8; --accent-weak:#e7eefb; --accent-text:#ffffff;
+  --danger:#c2392f; --danger-weak:#fcebea; --ok:#1d8148; --ok-weak:#e4f4ea; --warn:#9a6200; --warn-weak:#fff3d6;
+  --walk:#dcebd5; --walk-line:#8fbf7d; --walk-text:#2b5720;
+  --shuttle:#fde1b0; --shuttle-line:#e4a43c; --shuttle-text:#6f4300;
+  --wait:rgba(30,33,38,.06);
+  --radius:12px; --shadow:0 1px 2px rgba(0,0,0,.04),0 2px 8px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#15161a; --surface:#1f2126; --surface2:#282b31; --text:#e7e7e4; --muted:#9a9ea6; --line:#34373e;
+    --accent:#6e9dff; --accent-weak:#22304b; --accent-text:#0d1320;
+    --danger:#ff7c70; --danger-weak:#3b2321; --ok:#61cf8f; --ok-weak:#1c3327; --warn:#f0b64b; --warn-weak:#3a3017;
+    --walk:#26391f; --walk-line:#5c8f4b; --walk-text:#bfe0b2;
+    --shuttle:#463414; --shuttle-line:#b98326; --shuttle-text:#f7d59c;
+    --wait:rgba(255,255,255,.05); --shadow:none;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font:15px/1.55 Pretendard,"Apple SD Gothic Neo","Malgun Gothic","맑은 고딕",system-ui,sans-serif;font-variant-numeric:tabular-nums;-webkit-font-smoothing:antialiased}
+header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.top-inner{max-width:1080px;margin:0 auto;padding:12px 16px 0;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-weight:800;font-size:18px;letter-spacing:-.02em;display:flex;align-items:center;gap:8px}
+.brand-dot{width:22px;height:22px;border-radius:7px;background:var(--accent);display:inline-grid;place-items:center;color:var(--accent-text);font-size:13px}
+.save-status{margin-left:auto;font-size:13px;color:var(--muted)}
+.save-status.err{color:var(--danger);font-weight:700}
+nav.tabs{max-width:1080px;margin:0 auto;padding:8px 16px 0;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none}
+nav.tabs::-webkit-scrollbar{display:none}
+nav.tabs button{flex:none;border:0;background:none;color:var(--muted);font:inherit;font-weight:600;padding:10px 12px;border-bottom:2px solid transparent;cursor:pointer;min-height:40px}
+nav.tabs button[aria-selected="true"]{color:var(--text);border-bottom-color:var(--accent)}
+nav.tabs .num{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--surface2);font-size:11px;margin-right:6px}
+nav.tabs button[aria-selected="true"] .num{background:var(--accent);color:var(--accent-text)}
+main{max-width:1080px;margin:0 auto;padding:20px 16px 80px}
+h2{font-size:21px;margin:0 0 4px;letter-spacing:-.02em}
+h3{font-size:16px;margin:0 0 10px}
+.sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card.flat{box-shadow:none;background:var(--surface2)}
+.grid{display:grid;gap:12px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+.g6{grid-template-columns:repeat(6,minmax(0,1fr))}
+@media (max-width:720px){.g6{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field>.lbl{font-size:13px;color:var(--muted);font-weight:600}
+.field small{color:var(--muted);font-size:12px}
+input,select,textarea{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:7px 10px;min-height:38px;width:100%;min-width:0}
+textarea{min-height:70px;resize:vertical}
+input[type=color]{padding:2px;width:52px;height:38px}
+input[type=checkbox]{width:18px;height:18px;min-height:0;accent-color:var(--accent)}
+input[type=range]{padding:0;border:0;accent-color:var(--accent)}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-weight:600;font-size:14px;padding:7px 14px;border-radius:8px;cursor:pointer;min-height:38px;text-decoration:none;white-space:nowrap}
+.btn:hover{background:var(--surface2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.danger{color:var(--danger)}
+.btn.small{padding:4px 10px;min-height:32px;font-size:13px}
+.btn.big{padding:11px 22px;font-size:16px;min-height:46px}
+.btn.icon{padding:4px 8px;min-width:36px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row.end{justify-content:flex-end}
+.spacer{flex:1}
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--surface2);color:var(--muted);white-space:nowrap}
+.badge.blue{background:var(--accent-weak);color:var(--accent)}
+.badge.green{background:var(--ok-weak);color:var(--ok)}
+.badge.orange{background:var(--shuttle);color:var(--shuttle-text)}
+.badge.red{background:var(--danger-weak);color:var(--danger)}
+.notice{border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:14px;border:1px solid transparent}
+.notice ul{margin:6px 0 0;padding-left:20px}
+.notice.warn{background:var(--warn-weak);color:var(--warn);border-color:color-mix(in srgb,var(--warn) 25%,transparent)}
+.notice.err{background:var(--danger-weak);color:var(--danger);border-color:color-mix(in srgb,var(--danger) 25%,transparent)}
+.notice.ok{background:var(--ok-weak);color:var(--ok);border-color:color-mix(in srgb,var(--ok) 25%,transparent)}
+.notice.info{background:var(--accent-weak);color:var(--accent)}
+.muted{color:var(--muted)}
+.days-check{display:flex;gap:4px;flex-wrap:wrap}
+.days-check label{display:inline-flex;align-items:center;justify-content:center;min-width:36px;height:34px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;user-select:none;background:var(--surface)}
+.days-check input{position:absolute;opacity:0;pointer-events:none}
+.days-check label:has(input:checked){background:var(--accent);border-color:var(--accent);color:var(--accent-text)}
+.days-check label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.acad-card{display:flex;gap:12px;align-items:flex-start}
+.swatch{width:12px;align-self:stretch;border-radius:6px;flex:none}
+.acad-card .info{flex:1;min-width:0}
+.acad-card .name{font-weight:800;font-size:16px}
+.opt{border:1px solid var(--line);border-radius:10px;padding:12px;margin-bottom:10px;background:var(--surface)}
+.sess{display:grid;grid-template-columns:88px minmax(0,1fr) minmax(0,1fr) 40px;gap:6px;align-items:center;margin-top:6px}
+.stop-row{display:grid;grid-template-columns:28px minmax(0,1fr) 130px auto;gap:6px;align-items:center;margin-top:6px}
+.stop-row .idx{font-weight:700;color:var(--muted);text-align:center}
+.slot-row{display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1fr) 40px;gap:6px;align-items:center;margin-bottom:6px}
+.slot-no{font-weight:700;color:var(--muted);font-size:13px}
+.route-head{display:grid;grid-template-columns:minmax(0,1fr) 150px auto;gap:8px;align-items:end}
+@media (max-width:560px){
+  .sess{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 40px}
+  .sess>select{grid-column:1/3;grid-row:1}
+  .sess>button{grid-column:3;grid-row:1}
+  .stop-row{grid-template-columns:24px minmax(0,1fr) auto}
+  .stop-row>select{grid-column:2/4;grid-row:1}
+  .stop-row>input{grid-column:2;grid-row:2}
+  .stop-row .ctl{grid-column:3;grid-row:2}
+  .stop-row .idx{grid-row:1/3}
+  input[type=time]{padding:7px 6px}
+  input[type=time]::-webkit-calendar-picker-indicator{display:none}
+  .slot-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 40px}
+  .slot-no{display:none}
+  .route-head{grid-template-columns:minmax(0,1fr) auto}
+  .route-head>.field:first-child{grid-column:1/3}
+}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) 92px auto auto;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
+.pair:last-child{border-bottom:0}
+.pair .names{min-width:0;font-weight:600}
+.pair .names .arrow{color:var(--muted);margin:0 6px}
+.pair.missing input{border-color:var(--warn);background:var(--warn-weak)}
+.pair .min{display:flex;align-items:center;gap:4px}
+@media (max-width:480px){.pair{grid-template-columns:minmax(0,1fr) 84px}.pair .src{grid-column:1}.pair .map{justify-self:end}}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--surface2);border-radius:10px;padding:10px 12px}
+.stat .k{font-size:12px;color:var(--muted);font-weight:600}
+.stat .v{font-size:20px;font-weight:800;letter-spacing:-.02em}
+.plan-tabs{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap}
+.plan-tabs button{border:1px solid var(--line);background:var(--surface);font:inherit;font-weight:700;padding:8px 14px;border-radius:999px;cursor:pointer;color:var(--text);min-height:38px}
+.plan-tabs button[aria-selected="true"]{background:var(--text);color:var(--bg);border-color:var(--text)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 10px 4px 6px;font-size:13px;background:var(--surface)}
+.chip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.week-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.week{display:grid;grid-template-columns:44px repeat(6,minmax(92px,1fr));min-width:600px}
+.week .hd{position:sticky;top:0;text-align:center;font-weight:800;padding:8px 0;border-bottom:1px solid var(--line);background:var(--surface);font-size:14px}
+.week .hd small{display:block;font-weight:600;color:var(--muted);font-size:11px}
+.week .axis{position:relative;border-right:1px solid var(--line)}
+.week .axis span{position:absolute;right:6px;font-size:11px;color:var(--muted);transform:translateY(-50%)}
+.week .col{position:relative;border-right:1px solid var(--line)}
+.week .col:last-child{border-right:0}
+.blk{position:absolute;left:4px;right:4px;border-radius:6px;overflow:hidden;font-size:11px;line-height:1.25;padding:2px 5px}
+.blk.class{color:#fff;font-weight:700;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08);z-index:2}
+.blk.class small{display:block;font-weight:600;opacity:.9}
+.blk.walk{background:var(--walk);color:var(--walk-text);border-left:3px solid var(--walk-line);left:14px;right:14px;z-index:1}
+.blk.shuttle{background:var(--shuttle);color:var(--shuttle-text);border-left:3px solid var(--shuttle-line);left:10px;right:10px;z-index:1}
+.blk.wait{background:repeating-linear-gradient(135deg,var(--wait) 0 4px,transparent 4px 8px);left:24px;right:24px;z-index:0}
+.blk.event{height:0!important;border-top:2px dashed var(--muted);border-radius:0;padding:0;left:0;right:0;overflow:visible;z-index:3}
+.blk.event span{position:absolute;right:2px;top:-15px;font-size:10px;color:var(--muted);background:var(--surface);padding:0 3px;border-radius:3px;white-space:nowrap}
+.day-pick{display:flex;gap:6px;margin:16px 0 10px;flex-wrap:wrap}
+.day-pick button{border:1px solid var(--line);background:var(--surface);color:var(--text);font:inherit;font-weight:700;width:44px;height:38px;border-radius:8px;cursor:pointer}
+.day-pick button[aria-selected="true"]{background:var(--accent);color:var(--accent-text);border-color:var(--accent)}
+.tl{list-style:none;margin:0;padding:0}
+.tl li{display:grid;grid-template-columns:96px 28px 1fr;gap:8px;padding:7px 0;align-items:start;border-bottom:1px dashed var(--line)}
+.tl li:last-child{border-bottom:0}
+.tl .t{font-weight:700;font-size:13px;padding-top:2px}
+.tl .ic{width:26px;height:26px;border-radius:8px;display:grid;place-items:center;font-size:14px;background:var(--surface2)}
+.tl .ic.walk{background:var(--walk)}
+.tl .ic.shuttle{background:var(--shuttle)}
+.tl .ic.class{color:#fff}
+.tl .x{font-size:14px;padding-top:2px}
+.tl li.wait .x{color:var(--muted)}
+.onboard ol{margin:8px 0 14px;padding-left:20px}
+.onboard li{margin:3px 0}
+details summary{cursor:pointer;font-weight:700}
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.4);display:grid;place-items:center;z-index:50;padding:16px}
+.modal{background:var(--surface);border-radius:14px;padding:18px;max-width:640px;width:100%;max-height:90vh;overflow:auto}
+.modal textarea{min-height:300px;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.lock-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,220px);gap:8px;align-items:center;padding:6px 0}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:10px 16px;border-radius:10px;font-weight:600;z-index:60;font-size:14px;max-width:calc(100% - 32px)}
+@media print{header.top,.no-print{display:none!important}main{padding:0}.card{box-shadow:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-inner">
+    <div class="brand"><span class="brand-dot">방</span>방과후 스케줄러</div>
+    <div class="save-status" id="saveStatus" role="status" aria-live="polite"></div>
+  </div>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+</header>
+<main id="app"></main>
+
+<script>
+'use strict';
+// ================= ENGINE START =================
+const DAYS = ['mon','tue','wed','thu','fri','sat'];
+const WEEKDAYS = ['mon','tue','wed','thu','fri'];
+const DAY_KO = {mon:'월',tue:'화',wed:'수',thu:'목',fri:'금',sat:'토'};
+// 평일은 학교에서 하교 시각에 출발, 토요일은 학교가 없으므로 집에서 '출발 가능 시간'에 출발
+function dayStart(day){ return day === 'sat' ? {place:'home', word:'출발 가능 시간', event:'출발 가능'} : {place:'school', word:'하교', event:'하교'}; }
+const emptyByDay = () => Object.fromEntries(DAYS.map(d => [d, []]));
+
+function toMin(s){
+  if (s == null || s === '') return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(s).trim());
+  if (!m) return null;
+  return Number(m[1]) * 60 + Number(m[2]);
+}
+function fmt(m){
+  if (m == null || isNaN(m)) return '--:--';
+  m = Math.round(m);
+  return String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+}
+function dur(m){
+  m = Math.round(m || 0);
+  if (m < 60) return m + '분';
+  const h = Math.floor(m / 60), r = m % 60;
+  return h + '시간' + (r ? ' ' + r + '분' : '');
+}
+function num(v, d){ const n = Number(v); return (v === '' || v == null || isNaN(n)) ? d : n; }
+function pairKey(a, b){ return a < b ? a + '>' + b : b + '>' + a; }
+// 한국어 조사: josa('수학', '와', '과') → '수학과'
+function josa(word, a, b){
+  const w = String(word || '');
+  const c = w.charCodeAt(w.length - 1);
+  if (c >= 0xAC00 && c <= 0xD7A3) return w + (((c - 0xAC00) % 28) ? b : a);
+  return w + a + '(' + b + ')';
+}
+
+function makeCtx(state){
+  const s = state.settings;
+  const places = {};
+  places.school = {id:'school', kind:'school', name:s.school.name || '학교', address:s.school.address, lat:s.school.lat, lng:s.school.lng};
+  places.home = {id:'home', kind:'home', name:s.home.name || '집', address:s.home.address, lat:s.home.lat, lng:s.home.lng};
+  for (const a of state.academies) places[a.id] = {id:a.id, kind:'academy', name:a.name || '(이름 없는 학원)', address:a.address, lat:a.lat, lng:a.lng};
+  for (const p of state.places) places[p.id] = {id:p.id, kind:'stop', name:p.name || '(이름 없는 정류장)', address:p.address, lat:p.lat, lng:p.lng};
+  const acadById = {};
+  for (const a of state.academies) acadById[a.id] = a;
+  const routes = (state.shuttleRoutes || []).filter(r => acadById[r.academyId] && acadById[r.academyId].hasShuttle)
+    .map(r => ({...r, stops:(r.stops || []).filter(x => x.placeId && places[x.placeId] && toMin(x.time) != null)
+      .map(x => ({placeId:x.placeId, t:toMin(x.time)}))}));
+  const w = s.weights || {};
+  return {
+    s, places, acadById, routes, matrix: state.travelMatrix || {},
+    buffer: num(s.shuttleBufferMinutes, 10), maxWalk: num(s.maxWalkMinutes, 15),
+    deadline: toMin(s.returnDeadline),
+    w: {travel:num(w.travel,1), wait:num(w.wait,0.7), walk:num(w.walk,0.5), returnTime:num(w.returnTime,0.3)},
+    missing: new Set(), legMemo: new Map(), dayMemo: new Map()
+  };
+}
+function nm(ctx, id){ return (ctx.places[id] && ctx.places[id].name) || id; }
+function walkMin(ctx, a, b){
+  if (a === b) return 0;
+  const e = ctx.matrix[pairKey(a, b)];
+  if (!e || e.walkMin === '' || e.walkMin == null || isNaN(Number(e.walkMin))) { ctx.missing.add(pairKey(a, b)); return null; }
+  return Number(e.walkMin);
+}
+function seg(type, start, end, text, extra){ return Object.assign({type, start, end, text}, extra || {}); }
+
+// 한 구간(from, t 시각부터 출발 가능) → to (수업 시작 s, 집이면 s=null) 최적 이동 방법
+// flex=true: 집에서 출발하는 첫 구간(토요일). 집에서는 기다릴 필요가 없으므로 가능한 한 늦게 출발한다.
+function bestLeg(ctx, day, from, t, to, s, dismissal, flex){
+  const key = day + '|' + from + '|' + t + '|' + to + '|' + s + '|' + (flex ? 1 : 0);
+  if (ctx.legMemo.has(key)) return ctx.legMemo.get(key);
+  const isHome = s == null;
+  const cands = [], fails = [];
+  const B = ctx.buffer, MW = ctx.maxWalk;
+  const pushCand = c => {
+    if (isHome && ctx.deadline != null && c.arrive > ctx.deadline) { fails.push(`${nm(ctx,to)} 도착 ${fmt(c.arrive)} (귀가 마감 ${fmt(ctx.deadline)} 초과)`); return; }
+    c.cost = ctx.w.travel * c.travel + ctx.w.wait * c.wait + ctx.w.walk * c.walk + (isHome ? ctx.w.returnTime * (c.arrive - dismissal) : 0);
+    cands.push(c);
+  };
+  // 1) 도보
+  const wk = walkMin(ctx, from, to);
+  if (wk == null) fails.push(`${nm(ctx,from)} ↔ ${nm(ctx,to)} 도보 시간 미입력`);
+  else if (wk > MW) fails.push(`${nm(ctx,from)} → ${nm(ctx,to)} 도보 ${wk}분 (최대 ${MW}분 초과)`);
+  else if (!isHome && t + wk > s) fails.push(`${nm(ctx,from)} → ${nm(ctx,to)} 도보 ${wk}분 필요, ${fmt(t)}~${fmt(s)} 사이 ${s - t}분뿐`);
+  else {
+    const dep = flex && !isHome ? s - wk : t;
+    const arrive = dep + wk, segs = [];
+    if (wk > 0) segs.push(seg('walk', dep, arrive, `${nm(ctx,from)} → ${nm(ctx,to)} 도보 ${wk}분`));
+    if (!isHome && s > arrive) segs.push(seg('wait', arrive, s, `${nm(ctx,to)} 도착, 수업까지 대기 ${s - arrive}분`));
+    pushCand({mode:'walk', travel:wk, walk:wk, wait:isHome ? 0 : s - arrive, arrive: isHome ? arrive : s, segs, shuttle:0});
+  }
+  // 2) 목적지 학원의 등원 셔틀
+  if (!isHome) for (const r of ctx.routes) {
+    if (r.academyId !== to || r.direction !== 'inbound' || !(r.days || []).includes(day)) continue;
+    const st = r.stops;
+    let d = st.findIndex(x => x.placeId === to); if (d < 0) d = st.length - 1;
+    if (d <= 0) continue;
+    const alpha = st[d].t;
+    const wDA = walkMin(ctx, st[d].placeId, to);
+    if (wDA == null || wDA > MW) continue;
+    if (alpha + B + wDA > s) { fails.push(`${r.name || '등원 셔틀'} 하차 ${fmt(alpha)} + 여유 ${B}분이면 수업 ${fmt(s)}에 늦음`); continue; }
+    for (let i = 0; i < d; i++) {
+      const X = st[i], tau = X.t;
+      if (tau >= alpha) continue;
+      const wPX = walkMin(ctx, from, X.placeId);
+      if (wPX == null || wPX > MW) continue;
+      if (t + wPX + B > tau) { fails.push(`${r.name || '등원 셔틀'} ${nm(ctx,X.placeId)} ${fmt(tau)} 탑승: ${fmt(t)} 출발 + 도보 ${wPX}분 + 여유 ${B}분이 부족`); continue; }
+      const dep = flex ? tau - B - wPX : t;
+      const segs = []; let cur = dep;
+      if (wPX > 0) { segs.push(seg('walk', cur, cur + wPX, `${nm(ctx,from)} → ${nm(ctx,X.placeId)} 정류장 도보 ${wPX}분`)); cur += wPX; }
+      segs.push(seg('wait', cur, tau, `${nm(ctx,X.placeId)} 정류장에서 셔틀 대기 ${tau - cur}분`));
+      segs.push(seg('shuttle', tau, alpha, `${r.name || '등원 셔틀'} 탑승 (${nm(ctx,X.placeId)} ${fmt(tau)} → ${nm(ctx,st[d].placeId)} ${fmt(alpha)})`));
+      cur = alpha;
+      if (wDA > 0) { segs.push(seg('walk', cur, cur + wDA, `${nm(ctx,st[d].placeId)} → ${nm(ctx,to)} 도보 ${wDA}분`)); cur += wDA; }
+      if (s > cur) segs.push(seg('wait', cur, s, `수업 시작까지 대기 ${s - cur}분`));
+      pushCand({mode:'shuttle', travel:wPX + (alpha - tau) + wDA, walk:wPX + wDA, wait:(tau - dep - wPX) + (s - cur), arrive:s, segs, shuttle:1});
+    }
+  }
+  // 3) 출발 학원의 하원 셔틀
+  if (ctx.places[from] && ctx.places[from].kind === 'academy') for (const r of ctx.routes) {
+    if (r.academyId !== from || r.direction !== 'outbound' || !(r.days || []).includes(day)) continue;
+    const st = r.stops;
+    let b = st.findIndex(x => x.placeId === from); if (b < 0) b = 0;
+    if (b >= st.length - 1) continue;
+    const tb = st[b].t;
+    const wFB = walkMin(ctx, from, st[b].placeId);
+    if (wFB == null || wFB > MW) continue;
+    if (t + wFB + B > tb) { fails.push(`${r.name || '하원 셔틀'} ${fmt(tb)} 출발: 수업 종료 ${fmt(t)} 후 여유 ${B}분 부족`); continue; }
+    for (let j = b + 1; j < st.length; j++) {
+      const Y = st[j], tY = Y.t;
+      if (tY <= tb) continue;
+      const wYD = walkMin(ctx, Y.placeId, to);
+      if (wYD == null || wYD > MW) continue;
+      if (!isHome && tY + B + wYD > s) continue;
+      const segs = []; let cur = t;
+      if (wFB > 0) { segs.push(seg('walk', cur, cur + wFB, `${nm(ctx,from)} → ${nm(ctx,st[b].placeId)} 정류장 도보 ${wFB}분`)); cur += wFB; }
+      segs.push(seg('wait', cur, tb, `${nm(ctx,st[b].placeId)}에서 하원 셔틀 대기 ${tb - cur}분`));
+      segs.push(seg('shuttle', tb, tY, `${r.name || '하원 셔틀'} 탑승 (${nm(ctx,st[b].placeId)} ${fmt(tb)} → ${nm(ctx,Y.placeId)} ${fmt(tY)})`));
+      cur = tY;
+      if (wYD > 0) { segs.push(seg('walk', cur, cur + wYD, `${nm(ctx,Y.placeId)} → ${nm(ctx,to)} 도보 ${wYD}분`)); cur += wYD; }
+      const arrive = cur;
+      if (!isHome && s > cur) segs.push(seg('wait', cur, s, `수업 시작까지 대기 ${s - cur}분`));
+      pushCand({mode:'shuttle', travel:wFB + (tY - tb) + wYD, walk:wFB + wYD, wait:(tb - t - wFB) + (isHome ? 0 : s - cur), arrive: isHome ? arrive : s, segs, shuttle:1});
+    }
+  }
+  let res;
+  if (cands.length) { cands.sort((a, b) => a.cost - b.cost); res = {ok:true, ...cands[0]}; }
+  else res = {ok:false, reason: fails.length ? [...new Set(fails)].slice(0, 3).join(' / ') : `${nm(ctx,from)} → ${nm(ctx,to)} 이동 방법이 없습니다`};
+  ctx.legMemo.set(key, res);
+  return res;
+}
+
+// sessions: 그 요일 수업들 [{acadId, optId, label, start, end}]
+function evalDay(ctx, day, sessions){
+  const empty = {ok:true, cost:0, travel:0, wait:0, walk:0, shuttle:0, segs:[], home:null, classes:0};
+  if (!sessions.length) return empty;
+  const ss = sessions.slice().sort((a, b) => a.start - b.start);
+  const key = day + '|' + ss.map(x => x.acadId + ':' + x.start + '-' + x.end).join(',');
+  if (ctx.dayMemo.has(key)) return ctx.dayMemo.get(key);
+  const D = DAY_KO[day];
+  const fail = reason => { const r = {ok:false, reason:`${D}요일: ${reason}`}; ctx.dayMemo.set(key, r); return r; };
+  const ds = dayStart(day);
+  const dis = toMin(ctx.s.dismissal[day]);
+  if (dis == null) return fail(`${ds.word}이 입력되지 않았습니다`);
+  if (ss[0].start < dis) return fail(`${nm(ctx,ss[0].acadId)} ${ss[0].label} 수업(${fmt(ss[0].start)})이 ${ds.word} ${fmt(dis)}보다 빠릅니다`);
+  let from = ds.place, t = dis;
+  const out = {ok:true, cost:0, travel:0, wait:0, walk:0, shuttle:0, segs:[seg('event', dis, dis, `${nm(ctx,ds.place)} ${ds.event}`)], home:null, classes:ss.length};
+  const add = L => { out.cost += L.cost; out.travel += L.travel; out.wait += L.wait; out.walk += L.walk; out.shuttle += L.shuttle; out.segs.push(...L.segs); };
+  for (const x of ss) {
+    const flex = from === 'home';
+    const L = bestLeg(ctx, day, from, t, x.acadId, x.start, dis, flex);
+    if (!L.ok) return fail(L.reason);
+    if (flex && L.segs.length) { const ev = out.segs[0]; ev.start = ev.end = L.segs[0].start; ev.text = `${nm(ctx,'home')} 출발`; }
+    add(L);
+    out.segs.push(seg('class', x.start, x.end, `${nm(ctx,x.acadId)} · ${x.label}`, {acadId:x.acadId, label:x.label}));
+    from = x.acadId; t = x.end;
+  }
+  const H = bestLeg(ctx, day, from, t, 'home', null, dis);
+  if (!H.ok) return fail(H.reason);
+  add(H);
+  out.home = H.arrive;
+  out.segs.push(seg('event', H.arrive, H.arrive, `${nm(ctx,'home')} 도착`));
+  ctx.dayMemo.set(key, out);
+  return out;
+}
+function evalWeek(ctx, byDay){
+  const res = {ok:true, cost:0, travel:0, wait:0, walk:0, shuttle:0, days:{}};
+  for (const d of DAYS) {
+    const r = evalDay(ctx, d, byDay[d] || []);
+    if (!r.ok) return {ok:false, reason:r.reason};
+    res.days[d] = r;
+    res.cost += r.cost; res.travel += r.travel; res.wait += r.wait; res.walk += r.walk; res.shuttle += r.shuttle;
+  }
+  return res;
+}
+function parseOption(o){
+  const list = [];
+  for (const s of (o.sessions || [])) {
+    const a = toMin(s.start), b = toMin(s.end);
+    if (!DAYS.includes(s.day)) return {ok:false, reason:'요일이 올바르지 않음'};
+    if (a == null || b == null) return {ok:false, reason:'수업 시간 미입력'};
+    if (a >= b) return {ok:false, reason:`${DAY_KO[s.day]} ${s.start}~${s.end} 종료가 시작보다 빠름`};
+    list.push({day:s.day, start:a, end:b});
+  }
+  if (!list.length) return {ok:false, reason:'수업 시간이 없음'};
+  for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++)
+    if (list[i].day === list[j].day && list[i].start < list[j].end && list[j].start < list[i].end) return {ok:false, reason:'같은 반 안에서 시간이 겹침'};
+  return {ok:true, list};
+}
+function blockedHit(state, list){
+  for (const b of (state.settings.blockedSlots || [])) {
+    const bs = toMin(b.start), be = toMin(b.end);
+    if (bs == null || be == null) continue;
+    for (const s of list) if (s.day === b.day && s.start < be && bs < s.end) return `제외 시간대(${DAY_KO[b.day]} ${b.start}~${b.end})와 겹침`;
+  }
+  return null;
+}
+function sessionsToByDay(picks){
+  const byDay = emptyByDay();
+  for (const p of picks) for (const s of p.sessions) byDay[s.day].push({...s, acadId:p.acadId, optId:p.optId, label:p.label});
+  return byDay;
+}
+function findOverlap(ctx, picks){
+  const byDay = sessionsToByDay(picks);
+  for (const d of DAYS) {
+    const a = byDay[d].slice().sort((x, y) => x.start - y.start);
+    for (let i = 1; i < a.length; i++) if (a[i].start < a[i-1].end)
+      return `${DAY_KO[d]}요일 ${nm(ctx,a[i-1].acadId)}(${fmt(a[i-1].start)}~${fmt(a[i-1].end)})와 ${nm(ctx,a[i].acadId)}(${fmt(a[i].start)}~${fmt(a[i].end)}) 시간 겹침`;
+  }
+  return null;
+}
+function evalPicks(ctx, picks){
+  const ov = findOverlap(ctx, picks);
+  if (ov) return {ok:false, reason:ov, overlap:true};
+  return evalWeek(ctx, sessionsToByDay(picks));
+}
+
+function solve(state, opts){
+  opts = opts || {};
+  const limit = opts.limit || 3, MAX = opts.maxLeaves || 2000000;
+  const t0 = Date.now();
+  const ctx = makeCtx(state);
+  const problems = [], warnings = [];
+  const acads = [];
+  if (!state.academies.length) problems.push('학원을 먼저 등록하세요.');
+  const locks = state.locks || {};
+  for (const a of state.academies) {
+    const allOpts = academyOptions(a);
+    const fp = flexParts(a);
+    if (fp && fp.count > FLEX_LIMIT) warnings.push(`${a.name}: 자동 조합이 ${fp.count.toLocaleString()}개라서 앞의 ${FLEX_LIMIT.toLocaleString()}개만 사용했어요. 요일이나 시간대를 줄여 주세요.`);
+    const lock = locks[a.id] && allOpts.some(o => o.id === locks[a.id]) ? locks[a.id] : null;
+    const opts2 = [], rej = [];
+    let rejGenerated = 0;
+    for (const o of allOpts) {
+      if (lock && o.id !== lock) continue;
+      const p = parseOption(o);
+      const lab = o.label || '이름 없는 반';
+      if (!p.ok) { rej.push(`${lab}: ${p.reason}`); continue; }
+      const bh = blockedHit(state, p.list);
+      if (bh) { if (o.generated) rejGenerated++; else rej.push(`${lab}: ${bh}`); continue; }
+      const wc = num(a.weeklyCount, 0);
+      if (wc && !o.generated && p.list.length !== wc) warnings.push(`${a.name} ${lab}: 주 ${wc}회로 등록했는데 수업 시간은 ${p.list.length}개입니다.`);
+      opts2.push({acadId:a.id, optId:o.id, label:lab, sessions:p.list});
+    }
+    if (rejGenerated) rej.push(`자동 조합 ${rejGenerated}개: 제외 시간대와 겹침`);
+    if (!opts2.length) problems.push(`${a.name || '이름 없는 학원'}: 선택할 수 있는 반이 없습니다` + (rej.length ? ` (${rej.join(' / ')})` : ' — 반을 추가하세요.') + (lock ? ' [반 고정 상태]' : ''));
+    acads.push({acad:a, opts:opts2, rej});
+  }
+  const usedDays = new Set();
+  acads.forEach(x => x.opts.forEach(o => o.sessions.forEach(s => usedDays.add(s.day))));
+  const noDis = DAYS.filter(d => usedDays.has(d) && toMin(state.settings.dismissal[d]) == null);
+  if (noDis.length) problems.push(`기본 설정에서 출발 시간을 입력하세요: ${noDis.map(d => `${DAY_KO[d]}요일 ${dayStart(d).word}`).join(', ')}`);
+  if (problems.length) return {ok:false, problems, warnings, plans:[], ms:Date.now() - t0};
+
+  acads.sort((x, y) => x.opts.length - y.opts.length);
+  const top = [], failCount = new Map();
+  const byDay = emptyByDay();
+  const picks = [];
+  let leaves = 0, capped = false, overlapCut = 0;
+  (function rec(i){
+    if (capped) return;
+    if (i === acads.length) {
+      if (++leaves > MAX) { capped = true; return; }
+      const r = evalWeek(ctx, byDay);
+      if (!r.ok) { failCount.set(r.reason, (failCount.get(r.reason) || 0) + 1); return; }
+      if (top.length < limit || r.cost < top[top.length - 1].cost) {
+        top.push({...r, picks: picks.map(p => ({acadId:p.acadId, optId:p.optId, label:p.label}))});
+        top.sort((a, b) => a.cost - b.cost);
+        if (top.length > limit) top.pop();
+      }
+      return;
+    }
+    for (const o of acads[i].opts) {
+      let clash = false;
+      for (const s of o.sessions) {
+        for (const e of byDay[s.day]) if (s.start < e.end && e.start < s.end) { clash = true; break; }
+        if (clash) break;
+      }
+      if (clash) { overlapCut++; continue; }
+      const added = o.sessions.map(s => { const x = {...s, acadId:o.acadId, optId:o.optId, label:o.label}; byDay[s.day].push(x); return x; });
+      picks.push(o);
+      rec(i + 1);
+      picks.pop();
+      for (const x of added) { const arr = byDay[x.day]; arr.splice(arr.indexOf(x), 1); }
+    }
+  })(0);
+
+  const missing = [...ctx.missing].map(k => k.split('>').map(id => nm(ctx, id)).join(' ↔ '));
+  if (missing.length) warnings.push(`도보 시간이 비어 있는 구간 ${missing.length}개는 도보로 이동할 수 없는 것으로 계산했습니다: ${missing.slice(0, 6).join(', ')}${missing.length > 6 ? ' 외' : ''}`);
+  if (capped) warnings.push(`조합이 너무 많아 ${MAX.toLocaleString()}개까지만 확인했습니다. 일부 반을 고정하면 정확해집니다.`);
+  const result = {ok: top.length > 0, plans: top, problems, warnings, leaves, ms: Date.now() - t0};
+  if (!top.length) result.problems = diagnose(ctx, acads, failCount);
+  return result;
+}
+
+function diagnose(ctx, acads, failCount){
+  const msgs = [];
+  // 1) 학원 하나만 넣어도 안 되는 경우
+  for (const {acad, opts, rej} of acads) {
+    let ok = false; const reasons = [];
+    for (const o of opts) { const r = evalPicks(ctx, [o]); if (r.ok) { ok = true; break; } reasons.push(`${o.label}: ${r.reason}`); }
+    if (!ok) msgs.push(`${josa(acad.name, '는', '은')} 다른 학원 없이 혼자 넣어도 가능한 반이 없습니다. ` + [...reasons, ...(rej || []).map(x => x + ' (후보에서 제외됨)')].join(' · '));
+  }
+  if (msgs.length) return msgs;
+  const excluded = acads.filter(x => x.rej && x.rej.length).map(x => `${x.acad.name} ${x.rej.join(', ')}`);
+  const exNote = excluded.length ? ` 참고: 후보에서 빠진 반 — ${excluded.join(' / ')}` : '';
+  // 2) 두 학원끼리 충돌
+  for (let i = 0; i < acads.length; i++) for (let j = i + 1; j < acads.length; j++) {
+    const A = acads[i], Bc = acads[j];
+    let ok = false, ov = 0, total = 0, reason = '';
+    outer: for (const oa of A.opts) for (const ob of Bc.opts) {
+      total++;
+      const r = evalPicks(ctx, [oa, ob]);
+      if (r.ok) { ok = true; break outer; }
+      if (r.overlap) ov++; else if (!reason) reason = `${oa.label}+${ob.label}: ${r.reason}`;
+    }
+    if (!ok) {
+      if (ov === total) msgs.push(`${josa(A.acad.name, '와', '과')} ${josa(Bc.acad.name, '는', '은')} 어떤 반을 골라도 시간이 겹칩니다.`);
+      else msgs.push(`${josa(A.acad.name, '와', '과')} ${josa(Bc.acad.name, '를', '을')} 함께 넣을 수 없습니다. 겹치지 않는 조합도 이동이 안 됩니다. 예) ${reason}`);
+    }
+  }
+  if (msgs.length) { if (exNote) msgs.push(exNote.trim()); return msgs; }
+  let best = null, n = 0;
+  for (const [k, v] of failCount) if (v > n) { n = v; best = k; }
+  msgs.push('학원 3곳 이상을 함께 넣으면 시간이 맞지 않습니다.' + (best ? ` 가장 많이 막힌 이유: ${best}` : ' 모든 조합에서 수업 시간이 겹칩니다.') + exNote);
+  return msgs;
+}
+
+// 요일·시간 자동 조합: a.flex = {enabled, days:[], slots:[{start,end}], perWeek}
+// "가능한 요일 중 주 N회, 그날은 시간대 중 하나" → 모든 조합을 반 옵션으로 만든다.
+const FLEX_LIMIT = 3000;
+function flexParts(a){
+  const f = a.flex;
+  if (!f || !f.enabled) return null;
+  const days = DAYS.filter(d => (f.days || []).includes(d));
+  const slots = (f.slots || []).filter(s => toMin(s.start) != null && toMin(s.end) != null && toMin(s.start) < toMin(s.end));
+  if (!days.length || !slots.length) return {days, slots, n:0, count:0};
+  const n = Math.min(Math.max(1, Math.round(num(f.perWeek, 1))), days.length);
+  let c = 1; for (let i = 0; i < n; i++) c = c * (days.length - i) / (i + 1);
+  return {days, slots, n, count: Math.round(c) * Math.pow(slots.length, n)};
+}
+function flexOptions(a){
+  const P = flexParts(a);
+  if (!P || !P.count) return [];
+  const {days, slots, n} = P, out = [];
+  const prod = (ds, i, acc) => {
+    if (out.length >= FLEX_LIMIT) return;
+    if (i === ds.length) {
+      out.push({id: a.id + '~' + acc.map(x => x.day + x.start.replace(':', '')).join('.'), label: acc.map(x => DAY_KO[x.day] + ' ' + x.start).join('·'), sessions: acc.map(x => ({...x})), generated:true});
+      return;
+    }
+    for (const s of slots) { acc.push({day:ds[i], start:s.start, end:s.end}); prod(ds, i + 1, acc); acc.pop(); }
+  };
+  const combo = (start, pick) => {
+    if (out.length >= FLEX_LIMIT) return;
+    if (pick.length === n) { prod(pick, 0, []); return; }
+    for (let i = start; i < days.length; i++) { pick.push(days[i]); combo(i + 1, pick); pick.pop(); }
+  };
+  combo(0, []);
+  return out;
+}
+// 직접 입력한 반 + 자동 조합 반
+function academyOptions(a){ return [...(a.classOptions || []), ...flexOptions(a)]; }
+
+// 확정 스케줄 재검증
+function evaluateSelection(state, selection){
+  const ctx = makeCtx(state);
+  const picks = [], issues = [];
+  for (const a of state.academies) {
+    const oid = selection[a.id];
+    const o = academyOptions(a).find(x => x.id === oid);
+    if (!o) { issues.push(`${a.name}: 확정된 반이 없거나 삭제되었습니다.`); continue; }
+    const p = parseOption(o);
+    if (!p.ok) { issues.push(`${a.name} ${o.label}: ${p.reason}`); continue; }
+    const bh = blockedHit(state, p.list); if (bh) issues.push(`${a.name} ${o.label}: ${bh}`);
+    picks.push({acadId:a.id, optId:o.id, label:o.label || '반', sessions:p.list});
+  }
+  const r = evalPicks(ctx, picks);
+  if (!r.ok) issues.push(r.reason);
+  return {plan: r.ok ? {...r, picks} : null, issues};
+}
+// ================= ENGINE END =================
+
+// ================= SAMPLE START =================
+function sampleState(){
+  const st = defaultState();
+  Object.assign(st.settings, {
+    home:{name:'우리집', address:'서울 OO구 OO로 12 (예시)'},
+    school:{name:'OO초등학교', address:'서울 OO구 OO로 34 (예시)'},
+    dismissal:{mon:'13:40', tue:'14:30', wed:'13:40', thu:'14:30', fri:'13:40', sat:'09:00'},
+    returnDeadline:'19:00', maxWalkMinutes:15, shuttleBufferMinutes:10
+  });
+  st.places = [{id:'p_apt', name:'OO아파트 정문', address:'서울 OO구 OO로 50 (예시)'}];
+  const mk = (day, start, end) => ({day, start, end});
+  st.academies = [
+    {id:'a_math', name:'OO수학', address:'서울 OO구 OO로 70 (예시)', color:'#3b6fd8', weeklyCount:2, hasShuttle:true, memo:'',
+      classOptions:[
+        {id:'o_m1', label:'A반', sessions:[mk('mon','15:00','16:30'), mk('wed','15:00','16:30')]},
+        {id:'o_m2', label:'B반', sessions:[mk('tue','16:00','17:30'), mk('thu','16:00','17:30')]},
+        {id:'o_m3', label:'C반', sessions:[mk('mon','17:00','18:30'), mk('wed','17:00','18:30')]}]},
+    {id:'a_eng', name:'△△영어', address:'서울 OO구 OO로 88 (예시)', color:'#d6563c', weeklyCount:2, hasShuttle:false, memo:'',
+      classOptions:[
+        {id:'o_e1', label:'가반', sessions:[mk('tue','15:00','16:30'), mk('thu','15:00','16:30')]},
+        {id:'o_e2', label:'나반', sessions:[mk('mon','16:50','18:20'), mk('wed','16:50','18:20')]},
+        {id:'o_e3', label:'다반', sessions:[mk('tue','17:40','19:00'), mk('thu','17:40','19:00')]}]},
+    {id:'a_piano', name:'□□피아노', address:'서울 OO구 OO로 21 (예시)', color:'#8a52c9', weeklyCount:1, hasShuttle:false, memo:'',
+      classOptions:[
+        {id:'o_p1', label:'금 2시', sessions:[mk('fri','14:00','15:00')]},
+        {id:'o_p2', label:'금 3시', sessions:[mk('fri','15:00','16:00')]},
+        {id:'o_p3', label:'화 4시40분', sessions:[mk('tue','16:40','17:40')]},
+        {id:'o_p4', label:'토 10시', sessions:[mk('sat','10:00','11:00')]}]},
+    {id:'a_tkd', name:'◇◇태권도', address:'서울 OO구 OO로 99 (예시)', color:'#1f9466', weeklyCount:3, hasShuttle:true, memo:'',
+      classOptions:[
+        {id:'o_t1', label:'1부', sessions:[mk('mon','15:10','16:00'), mk('wed','15:10','16:00'), mk('fri','15:10','16:00')]},
+        {id:'o_t2', label:'2부', sessions:[mk('mon','16:10','17:00'), mk('wed','16:10','17:00'), mk('fri','16:10','17:00')]},
+        {id:'o_t3', label:'3부', sessions:[mk('tue','17:50','18:40'), mk('thu','17:50','18:40'), mk('fri','17:50','18:40')]}]}
+  ];
+  const all = ['mon','tue','wed','thu','fri'];
+  st.shuttleRoutes = [
+    {id:'r1', academyId:'a_math', name:'수학 1호차 등원', direction:'inbound', days:all, stops:[{placeId:'school', time:'14:20'},{placeId:'p_apt', time:'14:30'},{placeId:'a_math', time:'14:45'}]},
+    {id:'r2', academyId:'a_math', name:'수학 2호차 등원', direction:'inbound', days:all, stops:[{placeId:'school', time:'15:25'},{placeId:'a_math', time:'15:40'}]},
+    {id:'r3', academyId:'a_math', name:'수학 하원 1', direction:'outbound', days:all, stops:[{placeId:'a_math', time:'16:45'},{placeId:'p_apt', time:'16:58'},{placeId:'home', time:'17:05'}]},
+    {id:'r4', academyId:'a_math', name:'수학 하원 2', direction:'outbound', days:all, stops:[{placeId:'a_math', time:'18:40'},{placeId:'home', time:'18:55'}]},
+    {id:'r5', academyId:'a_tkd', name:'태권도 등원 1차', direction:'inbound', days:all, stops:[{placeId:'school', time:'14:45'},{placeId:'a_tkd', time:'14:55'}]},
+    {id:'r6', academyId:'a_tkd', name:'태권도 등원 2차', direction:'inbound', days:all, stops:[{placeId:'a_math', time:'16:40'},{placeId:'school', time:'16:50'},{placeId:'a_tkd', time:'17:00'}]},
+    {id:'r7', academyId:'a_tkd', name:'태권도 하원', direction:'outbound', days:all, stops:[{placeId:'a_tkd', time:'17:15'},{placeId:'home', time:'17:30'}]}
+  ];
+  const W = [['school','home',10],['school','a_math',18],['school','a_eng',8],['school','a_piano',6],['school','a_tkd',20],
+    ['home','a_math',15],['home','a_eng',12],['home','a_piano',9],['home','a_tkd',14],
+    ['a_math','a_eng',7],['a_math','a_piano',12],['a_math','a_tkd',22],['a_eng','a_piano',5],['a_eng','a_tkd',13],['a_piano','a_tkd',11],
+    ['p_apt','school',6],['p_apt','home',4],['p_apt','a_math',10],['p_apt','a_eng',9],['p_apt','a_piano',8],['p_apt','a_tkd',15]];
+  for (const [a, b, m] of W) st.travelMatrix[pairKey(a, b)] = {walkMin:m, source:'manual'};
+  return st;
+}
+// ================= SAMPLE END =================
+
+// ================= STATE / STORAGE =================
+const KEY = 'afterschool-scheduler:v1';
+const UI_KEY = 'afterschool-scheduler:ui';
+function defaultState(){
+  return {
+    version: 1,
+    settings: {
+      home:{name:'집', address:''}, school:{name:'학교', address:''},
+      dismissal:{mon:'', tue:'', wed:'', thu:'', fri:'', sat:'09:00'},
+      returnDeadline:'19:00', maxWalkMinutes:15, shuttleBufferMinutes:10,
+      weights:{travel:1, wait:0.7, walk:0.5, returnTime:0.3},
+      blockedSlots:[]
+    },
+    places:[], academies:[], shuttleRoutes:[], travelMatrix:{}, confirmedSchedule:null, locks:{}
+  };
+}
+function migrate(d){
+  const base = defaultState();
+  if (!d || typeof d !== 'object') return base;
+  const s = Object.assign({}, base.settings, d.settings || {});
+  s.home = Object.assign({}, base.settings.home, s.home || {});
+  s.school = Object.assign({}, base.settings.school, s.school || {});
+  s.dismissal = Object.assign({}, base.settings.dismissal, s.dismissal || {});
+  s.weights = Object.assign({}, base.settings.weights, s.weights || {});
+  s.blockedSlots = Array.isArray(s.blockedSlots) ? s.blockedSlots : [];
+  const out = Object.assign(base, d, {settings:s, version:1});
+  out.places = Array.isArray(out.places) ? out.places : [];
+  out.academies = (Array.isArray(out.academies) ? out.academies : []).map(a => Object.assign({color:'#3b6fd8', weeklyCount:'', hasShuttle:false, memo:'', classOptions:[]}, a, {classOptions:(a.classOptions || []).map(o => Object.assign({sessions:[]}, o))},
+    a.flex ? {flex:Object.assign({enabled:false, days:[], slots:[], perWeek:1}, a.flex)} : {}));
+  out.shuttleRoutes = (Array.isArray(out.shuttleRoutes) ? out.shuttleRoutes : []).map(r => Object.assign({days:[], stops:[], direction:'inbound', name:''}, r));
+  out.travelMatrix = out.travelMatrix && typeof out.travelMatrix === 'object' ? out.travelMatrix : {};
+  out.locks = out.locks && typeof out.locks === 'object' ? out.locks : {};
+  return out;
+}
+let storageOk = true;
+function load(){
+  try { const raw = localStorage.getItem(KEY); return raw ? migrate(JSON.parse(raw)) : defaultState(); }
+  catch (e) { storageOk = false; return defaultState(); }
+}
+let state = load();
+const ui = Object.assign({tab:'settings', editing:null, results:null, planIdx:0, day:'mon', stale:false, travelOnlyMissing:false}, (() => { try { return JSON.parse(localStorage.getItem(UI_KEY) || '{}'); } catch (e) { return {}; } })());
+ui.results = null; ui.editing = ui.editing || null;
+function saveUi(){ try { localStorage.setItem(UI_KEY, JSON.stringify({tab:ui.tab, editing:ui.editing, day:ui.day, travelOnlyMissing:ui.travelOnlyMissing})); } catch (e) {} }
+
+let saveTimer = null;
+function setStatus(text, err){ const el = document.getElementById('saveStatus'); el.textContent = text; el.classList.toggle('err', !!err); }
+function flush(){
+  clearTimeout(saveTimer); saveTimer = null;
+  try { localStorage.setItem(KEY, JSON.stringify(state)); storageOk = true; setStatus('✓ 저장됨'); }
+  catch (e) { storageOk = false; setStatus('⚠ 저장 실패 — JSON 내보내기로 백업하세요', true); }
+}
+function save(dirty){
+  if (dirty !== false && ui.results) ui.stale = true;
+  setStatus('저장 중…');
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flush, 300);
+}
+window.addEventListener('beforeunload', () => { if (saveTimer) flush(); });
+
+const uid = p => p + '_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+// ================= DOM HELPERS =================
+function h(tag, props, ...kids){
+  const el = document.createElement(tag);
+  let val;
+  if (props) for (const [k, v] of Object.entries(props)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
+    else if (k === 'class') el.className = v;
+    else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+    else if (k === 'value') val = v;
+    else if (k === 'checked') el.checked = !!v;
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) { if (c == null || c === false) continue; el.append(c instanceof Node ? c : document.createTextNode(String(c))); }
+  if (val !== undefined) el.value = val;
+  return el;
+}
+const field = (label, input, hint) => h('label', {class:'field'}, h('span', {class:'lbl'}, label), input, hint ? h('small', null, hint) : null);
+const txt = (value, set, attrs) => h('input', Object.assign({type:'text', value:value ?? '', onInput:e => { set(e.target.value); save(); }}, attrs || {}));
+const tim = (value, set, attrs) => h('input', Object.assign({type:'time', value:value ?? '', onInput:e => { set(e.target.value); save(); }}, attrs || {}));
+const numIn = (value, set, attrs) => h('input', Object.assign({type:'number', inputmode:'numeric', value:value ?? '', onInput:e => { set(e.target.value === '' ? '' : Number(e.target.value)); save(); }}, attrs || {}));
+const coordIn = (value, set, ph) => h('input', {type:'text', inputmode:'decimal', placeholder:ph, value:value ?? '', onInput:e => { const v = e.target.value.trim(); set(v === '' || isNaN(Number(v)) ? undefined : Number(v)); save(); }});
+function sel(value, options, onChange, attrs){
+  return h('select', Object.assign({value:value ?? '', onChange:e => onChange(e.target.value)}, attrs || {}), options.map(([v, l]) => h('option', {value:v}, l)));
+}
+function daysCheck(days, onChange){
+  return h('div', {class:'days-check'}, DAYS.map(d => h('label', null,
+    h('input', {type:'checkbox', checked:days.includes(d), onChange:e => { const set = new Set(days); e.target.checked ? set.add(d) : set.delete(d); days.splice(0, days.length, ...DAYS.filter(x => set.has(x))); onChange && onChange(); save(); }}),
+    DAY_KO[d])));
+}
+function toast(msg){
+  const t = h('div', {class:'toast', role:'status'}, msg);
+  document.body.append(t);
+  setTimeout(() => t.remove(), 2600);
+}
+function modal(title, body, actions){
+  const bg = h('div', {class:'modal-bg', onClick:e => { if (e.target === bg) bg.remove(); }});
+  const close = () => bg.remove();
+  bg.append(h('div', {class:'modal', role:'dialog', 'aria-modal':'true', 'aria-label':title},
+    h('div', {class:'row'}, h('h3', {style:{margin:0}}, title), h('span', {class:'spacer'}), h('button', {class:'btn icon', 'aria-label':'닫기', onClick:close}, '✕')),
+    h('div', {style:{marginTop:'12px'}}, body),
+    actions ? h('div', {class:'row end', style:{marginTop:'14px'}}, actions(close)) : null));
+  document.body.append(bg);
+  return close;
+}
+
+// ================= PLACES =================
+function placeList(){
+  const s = state.settings;
+  return [
+    {id:'school', kind:'school', name:s.school.name || '학교', obj:s.school},
+    {id:'home', kind:'home', name:s.home.name || '집', obj:s.home},
+    ...state.academies.map(a => ({id:a.id, kind:'academy', name:a.name || '(이름 없는 학원)', obj:a})),
+    ...state.places.map(p => ({id:p.id, kind:'stop', name:p.name || '(이름 없는 정류장)', obj:p}))
+  ];
+}
+function placeById(id){ return placeList().find(p => p.id === id); }
+function neededPairs(){
+  const pl = placeList();
+  const core = pl.filter(p => p.kind !== 'stop'), stops = pl.filter(p => p.kind === 'stop');
+  const out = [];
+  for (let i = 0; i < core.length; i++) for (let j = i + 1; j < core.length; j++) out.push([core[i], core[j]]);
+  for (const s of stops) for (const c of core) out.push([s, c]);
+  return out;
+}
+function mercator(lat, lng){
+  const x = lng * 20037508.34 / 180;
+  const y = Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180) * 20037508.34 / 180;
+  return [x, y];
+}
+function hasCoord(o){ return o && typeof o.lat === 'number' && typeof o.lng === 'number'; }
+function naverLink(a, b){
+  if (hasCoord(a.obj) && hasCoord(b.obj)) {
+    const [x1, y1] = mercator(a.obj.lat, a.obj.lng), [x2, y2] = mercator(b.obj.lat, b.obj.lng);
+    return `https://map.naver.com/p/directions/${x1},${y1},${encodeURIComponent(a.name)},,/${x2},${y2},${encodeURIComponent(b.name)},,/-/walk`;
+  }
+  const q = (b.obj && b.obj.address) || b.name;
+  return `https://map.naver.com/p/search/${encodeURIComponent(q)}`;
+}
+function naverSearch(o, name){ return `https://map.naver.com/p/search/${encodeURIComponent((o && o.address) || name || '')}`; }
+
+// ================= RENDER =================
+const TABS = [
+  ['settings', '기본 설정'], ['academies', '학원'], ['stops', '정류장'], ['travel', '이동 시간'], ['schedule', '스케줄'], ['data', '데이터']
+];
+function renderTabs(){
+  const nav = document.getElementById('tabs');
+  nav.replaceChildren(...TABS.map(([id, label], i) => h('button', {role:'tab', 'aria-selected': String(ui.tab === id), onClick:() => go(id)}, h('span', {class:'num'}, i + 1), label)));
+}
+function go(tab){ ui.tab = tab; if (tab !== 'academies') ui.editing = null; saveUi(); render(); window.scrollTo(0, 0); }
+function render(){
+  const y = window.scrollY;
+  renderTabs();
+  const app = document.getElementById('app');
+  const view = {settings:viewSettings, academies:viewAcademies, stops:viewStops, travel:viewTravel, schedule:viewSchedule, data:viewData}[ui.tab] || viewSettings;
+  const banners = [];
+  if (!storageOk) banners.push(h('div', {class:'notice err'}, '이 브라우저에서는 데이터 저장이 막혀 있습니다 (사생활 보호 모드이거나 저장소 차단). 데이터 탭에서 JSON으로 내보내 백업하세요.'));
+  app.replaceChildren(...banners, view());
+  window.scrollTo(0, y);
+}
+const rerender = () => render();
+
+// ---------- 1. 기본 설정 ----------
+function viewSettings(){
+  const s = state.settings;
+  const isEmpty = !state.academies.length && !s.school.address && !s.home.address;
+  return h('section', null,
+    isEmpty ? h('div', {class:'card onboard'},
+      h('h3', null, '처음 오셨네요 👋'),
+      h('ol', null,
+        h('li', null, h('b', null, '기본 설정'), ' — 집, 학교, 요일별 하교 시간'),
+        h('li', null, h('b', null, '학원'), ' — 학원별 반(수업 시간)과 셔틀 노선'),
+        h('li', null, h('b', null, '정류장'), ' — 셔틀이 서는 별도 장소 (아파트 정문 등)'),
+        h('li', null, h('b', null, '이동 시간'), ' — 장소끼리 도보 시간 (네이버 지도 버튼으로 확인)'),
+        h('li', null, h('b', null, '스케줄'), ' — 자동으로 짜고 확정')),
+      h('div', {class:'row'}, h('button', {class:'btn primary', onClick:loadSample}, '예시 데이터로 체험'), h('span', {class:'muted', style:{fontSize:'13px'}}, '또는 아래부터 바로 입력하세요'))) : null,
+    h('h2', null, '기본 설정'), h('p', {class:'sub'}, '출발지(학교)와 도착지(집), 하교 시간, 이동 규칙을 정해요.'),
+    h('div', {class:'grid g2'},
+      placeCard('학교 (출발지)', s.school),
+      placeCard('집 (도착지)', s.home)),
+    h('div', {class:'card'},
+      h('h3', null, '요일별 출발 시간'),
+      h('p', {class:'muted', style:{fontSize:'13px', marginTop:'-4px'}}, '평일은 학교 하교 시간, 토요일은 집에서 나설 수 있는 시간이에요. 토요일 동선은 집 → 학원 → 집으로 계산해요.'),
+      h('div', {class:'grid g6'}, DAYS.map(d => field(DAY_KO[d] + ' ' + (d === 'sat' ? '집 출발' : '하교'), tim(s.dismissal[d], v => s.dismissal[d] = v))))),
+    h('div', {class:'card'},
+      h('h3', null, '이동 규칙'),
+      h('div', {class:'grid g3'},
+        field('귀가 마감 시간', tim(s.returnDeadline, v => s.returnDeadline = v), '이보다 늦게 집에 도착하는 안은 제외'),
+        field('한 번에 걸을 수 있는 최대 시간 (분)', numIn(s.maxWalkMinutes, v => s.maxWalkMinutes = v, {min:1}), '이보다 먼 구간은 셔틀로만 이동'),
+        field('셔틀 승하차 여유 시간 (분)', numIn(s.shuttleBufferMinutes, v => s.shuttleBufferMinutes = v, {min:0}), '탑승 전·하차 후 확보할 시간')),
+      h('p', {class:'muted', style:{fontSize:'13px', margin:'10px 0 0'}}, '이동 수단은 도보와 셔틀만 사용합니다. 학원 사이 별도 휴식 시간은 두지 않아요.')),
+    h('div', {class:'card'},
+      h('div', {class:'row'}, h('h3', {style:{margin:0}}, '제외 시간대'), h('span', {class:'spacer'}),
+        h('button', {class:'btn small', onClick:() => { s.blockedSlots.push({day:'mon', start:'', end:''}); save(); rerender(); }}, '+ 추가')),
+      h('p', {class:'muted', style:{fontSize:'13px'}}, '이 시간에 걸치는 반은 추천하지 않아요. 예: 화요일 16:00~20:00 가족 일정'),
+      s.blockedSlots.length ? s.blockedSlots.map((b, i) => h('div', {class:'sess'},
+        sel(b.day, DAYS.map(d => [d, DAY_KO[d] + '요일']), v => { b.day = v; save(); }),
+        tim(b.start, v => b.start = v, {'aria-label':'시작'}), tim(b.end, v => b.end = v, {'aria-label':'끝'}),
+        h('button', {class:'btn icon danger', 'aria-label':'삭제', onClick:() => { s.blockedSlots.splice(i, 1); save(); rerender(); }}, '✕'))) : h('div', {class:'muted', style:{fontSize:'14px'}}, '없음')),
+    h('div', {class:'card'},
+      h('details', null, h('summary', null, '추천 기준 (가중치)'),
+        h('p', {class:'muted', style:{fontSize:'13px'}}, '점수가 낮을수록 좋은 안이에요. 중요하게 생각하는 항목의 값을 키우세요.'),
+        h('div', {class:'grid g2'}, [['travel','총 이동 시간'], ['wait','총 대기 시간'], ['walk','걷는 시간 (추가 감점)'], ['returnTime','늦은 귀가']].map(([k, l]) => {
+          const out = h('b', null, String(s.weights[k]));
+          return field(h('span', null, l, ' · ', out), h('input', {type:'range', min:0, max:2, step:0.1, value:s.weights[k], onInput:e => { s.weights[k] = Number(e.target.value); out.textContent = e.target.value; save(); }}));
+        }))))
+  );
+}
+function placeCard(title, o){
+  return h('div', {class:'card'},
+    h('h3', null, title),
+    h('div', {class:'grid'},
+      field('이름', txt(o.name, v => o.name = v)),
+      field('주소', txt(o.address, v => o.address = v, {placeholder:'도로명 또는 지번 주소'})),
+      coordFields(o)));
+}
+function coordFields(o){
+  return h('details', null, h('summary', {class:'muted', style:{fontSize:'13px', fontWeight:600}}, '좌표 (선택) — 있으면 네이버 지도 길찾기가 바로 열려요'),
+    h('div', {class:'grid g2', style:{marginTop:'8px'}},
+      field('위도', coordIn(o.lat, v => o.lat = v, '37.5665')),
+      field('경도', coordIn(o.lng, v => o.lng = v, '126.9780'))));
+}
+
+// ---------- 2. 학원 ----------
+function viewAcademies(){
+  if (ui.editing) {
+    const a = state.academies.find(x => x.id === ui.editing);
+    if (a) return academyEditor(a);
+    ui.editing = null;
+  }
+  return h('section', null,
+    h('div', {class:'row', style:{marginBottom:'14px'}},
+      h('div', null, h('h2', null, '학원'), h('p', {class:'sub', style:{margin:0}}, '학원마다 반 하나만 선택해서 스케줄을 짜요.')),
+      h('span', {class:'spacer'}),
+      h('button', {class:'btn primary', onClick:addAcademy}, '+ 학원 추가')),
+    state.academies.length ? state.academies.map(a => {
+      const routes = state.shuttleRoutes.filter(r => r.academyId === a.id);
+      return h('div', {class:'card acad-card'},
+        h('div', {class:'swatch', style:{background:a.color}}),
+        h('div', {class:'info'},
+          h('div', {class:'row'}, h('span', {class:'name'}, a.name || '(이름 없음)'),
+            a.hasShuttle ? h('span', {class:'badge orange'}, `🚌 셔틀 ${routes.length}개 노선`) : h('span', {class:'badge'}, '셔틀 없음'),
+            a.classOptions.length ? h('span', {class:'badge blue'}, `반 ${a.classOptions.length}개`) : null,
+            flexParts(a) ? h('span', {class:'badge blue'}, `자동 조합 ${flexParts(a).count.toLocaleString()}개`) : null,
+            a.weeklyCount ? h('span', {class:'badge'}, `주 ${a.weeklyCount}회`) : null),
+          h('div', {class:'muted', style:{fontSize:'13px', marginTop:'4px'}}, a.address || '주소 미입력'),
+          h('div', {style:{fontSize:'13px', marginTop:'6px'}}, a.classOptions.map(o => h('div', null, h('b', null, o.label || '반'), ' ', optSummary(o))),
+            flexParts(a) ? h('div', null, h('b', null, '자동 조합'), ' ', flexSummary(a)) : null)),
+        h('div', {class:'row', style:{flexDirection:'column', alignItems:'stretch'}},
+          h('button', {class:'btn small', onClick:() => { ui.editing = a.id; saveUi(); render(); window.scrollTo(0, 0); }}, '편집'),
+          h('button', {class:'btn small danger', onClick:() => deleteAcademy(a)}, '삭제')));
+    }) : h('div', {class:'card empty'}, '등록된 학원이 없어요. ', h('button', {class:'btn small primary', onClick:addAcademy}, '+ 학원 추가')));
+}
+function optSummary(o){
+  const g = {};
+  for (const s of o.sessions) { const k = `${s.start || '?'}~${s.end || '?'}`; (g[k] = g[k] || []).push(DAY_KO[s.day] || '?'); }
+  return Object.entries(g).map(([k, d]) => `${d.join('/')} ${k}`).join(', ') || '시간 없음';
+}
+function flexSummary(a){
+  const P = flexParts(a);
+  if (!P) return '';
+  const days = P.days.map(d => DAY_KO[d]).join('');
+  const slots = P.slots.map(s => `${s.start}~${s.end}`).join(' / ');
+  return `${days || '요일 미선택'} 중 주 ${P.n || '?'}회 · ${slots || '시간대 미입력'}`;
+}
+const PALETTE = ['#3b6fd8','#d6563c','#8a52c9','#1f9466','#c7871a','#c2417e','#2a8fa8','#5f6b7a'];
+function addAcademy(){
+  const a = {id:uid('a'), name:'', address:'', color:PALETTE[state.academies.length % PALETTE.length], weeklyCount:'', hasShuttle:false, memo:'', classOptions:[]};
+  state.academies.push(a); ui.editing = a.id; save(); saveUi(); render(); window.scrollTo(0, 0);
+}
+function deleteAcademy(a){
+  if (!confirm(`'${a.name || '이름 없는 학원'}'을(를) 삭제할까요? 반, 셔틀 노선, 관련 이동 시간도 함께 삭제됩니다.`)) return;
+  state.academies = state.academies.filter(x => x.id !== a.id);
+  state.shuttleRoutes = state.shuttleRoutes.filter(r => r.academyId !== a.id);
+  for (const r of state.shuttleRoutes) r.stops = r.stops.filter(s => s.placeId !== a.id);
+  for (const k of Object.keys(state.travelMatrix)) if (k.split('>').includes(a.id)) delete state.travelMatrix[k];
+  delete state.locks[a.id];
+  if (state.confirmedSchedule) delete state.confirmedSchedule.selection[a.id];
+  save(); render();
+}
+function academyEditor(a){
+  const quick = {label:null, days:[], start:null, end:null};
+  const qLabel = h('input', {type:'text', placeholder:'예: A반'});
+  const qDays = []; const qDaysEl = daysCheck(qDays);
+  const qStart = h('input', {type:'time', 'aria-label':'시작'}), qEnd = h('input', {type:'time', 'aria-label':'끝'});
+  const addQuick = () => {
+    if (!qDays.length || !qStart.value || !qEnd.value) { toast('요일, 시작, 끝 시간을 모두 입력하세요'); return; }
+    if (toMin(qStart.value) >= toMin(qEnd.value)) { toast('끝 시간이 시작 시간보다 늦어야 해요'); return; }
+    a.classOptions.push({id:uid('o'), label:qLabel.value.trim() || `${String.fromCharCode(65 + a.classOptions.length)}반`, sessions:qDays.map(d => ({day:d, start:qStart.value, end:qEnd.value}))});
+    save(); rerender();
+  };
+  void quick;
+  return h('section', null,
+    h('div', {class:'row', style:{marginBottom:'12px'}},
+      h('button', {class:'btn small', onClick:() => { ui.editing = null; saveUi(); render(); }}, '← 학원 목록'),
+      h('span', {class:'spacer'}),
+      h('button', {class:'btn small danger', onClick:() => { deleteAcademy(a); ui.editing = null; saveUi(); render(); }}, '학원 삭제')),
+    h('h2', null, a.name || '새 학원'),
+    h('p', {class:'sub'}, '입력하면 자동으로 저장돼요.'),
+    h('div', {class:'card'},
+      h('h3', null, '기본 정보'),
+      h('div', {class:'grid g2'},
+        field('학원명', txt(a.name, v => a.name = v, {placeholder:'예: OO수학'})),
+        field('주소', h('div', {class:'row', style:{flexWrap:'nowrap'}}, txt(a.address, v => a.address = v, {placeholder:'도로명 또는 지번 주소'}),
+          h('a', {class:'btn small', href:naverSearch(a, a.name), target:'_blank', rel:'noopener', onClick:e => { e.currentTarget.href = naverSearch(a, a.name); }}, '지도'))),
+        field('주당 수업 횟수', numIn(a.weeklyCount, v => a.weeklyCount = v, {min:1, placeholder:'예: 2'})),
+        field('시간표 색상', h('input', {type:'color', value:a.color, onInput:e => { a.color = e.target.value; save(); }}))),
+      h('div', {style:{marginTop:'12px'}}, coordFields(a)),
+      h('label', {class:'row', style:{marginTop:'12px', cursor:'pointer'}},
+        h('input', {type:'checkbox', checked:a.hasShuttle, onChange:e => { a.hasShuttle = e.target.checked; save(); rerender(); }}),
+        h('b', null, '셔틀 운행'), h('span', {class:'muted', style:{fontSize:'13px'}}, '체크하면 아래에서 노선을 입력할 수 있어요')),
+      h('div', {style:{marginTop:'12px'}}, field('메모', h('textarea', {value:a.memo || '', onInput:e => { a.memo = e.target.value; save(); }})))),
+    flexEditor(a),
+    h('div', {class:'card'},
+      h('h3', null, `반 (수업 시간 옵션) · ${a.classOptions.length}개`),
+      h('p', {class:'muted', style:{fontSize:'13px', marginTop:'-4px'}}, '스케줄을 짤 때 이 중 하나를 골라요. 요일마다 시간이 다르면 반을 만든 뒤 시간을 고치세요.'),
+      a.classOptions.map((o, oi) => h('div', {class:'opt'},
+        h('div', {class:'row'},
+          h('div', {style:{flex:1, minWidth:'140px'}}, txt(o.label, v => o.label = v, {'aria-label':'반 이름', placeholder:'반 이름'})),
+          h('button', {class:'btn small', onClick:() => { o.sessions.push({day:'mon', start:'', end:''}); save(); rerender(); }}, '+ 요일 추가'),
+          h('button', {class:'btn small danger', onClick:() => { if (!confirm(`'${o.label}' 반을 삭제할까요?`)) return; a.classOptions.splice(oi, 1); if (state.locks[a.id] === o.id) delete state.locks[a.id]; save(); rerender(); }}, '반 삭제')),
+        o.sessions.map((s, si) => h('div', {class:'sess'},
+          sel(s.day, DAYS.map(d => [d, DAY_KO[d] + '요일']), v => { s.day = v; save(); }),
+          tim(s.start, v => s.start = v, {'aria-label':'시작'}), tim(s.end, v => s.end = v, {'aria-label':'끝'}),
+          h('button', {class:'btn icon danger', 'aria-label':'이 요일 삭제', onClick:() => { o.sessions.splice(si, 1); save(); rerender(); }}, '✕'))),
+        !o.sessions.length ? h('div', {class:'muted', style:{fontSize:'13px', marginTop:'6px'}}, '수업 시간이 없어요') : null)),
+      h('div', {class:'card flat', style:{marginBottom:0}},
+        h('b', null, '+ 새 반 추가'),
+        h('div', {class:'grid', style:{marginTop:'8px', gridTemplateColumns:'minmax(0,1fr)'}},
+          field('반 이름', qLabel),
+          field('요일', qDaysEl),
+          h('div', {class:'grid', style:{gridTemplateColumns:'1fr 1fr auto', alignItems:'end'}},
+            field('시작', qStart), field('끝', qEnd),
+            h('button', {class:'btn primary', onClick:addQuick}, '추가'))))),
+    a.hasShuttle ? shuttleEditor(a) : null);
+}
+function flexEditor(a){
+  const f = a.flex;
+  const on = !!(f && f.enabled);
+  const preview = h('div', {class:'notice info', style:{marginTop:'12px', marginBottom:0}});
+  const paint = () => {
+    const P = flexParts(a);
+    if (!P || !P.count) { preview.className = 'notice warn'; preview.textContent = '요일과 시간대를 하나 이상 입력하세요.'; return; }
+    const ex = flexOptions(a).slice(0, 3).map(o => o.label).join(', ');
+    preview.className = 'notice ' + (P.count > FLEX_LIMIT ? 'warn' : 'info');
+    preview.replaceChildren(h('b', null, `조합 ${P.count.toLocaleString()}개`), `를 자동으로 만들어 스케줄을 짤 때 비교해요. 예) ${ex}${P.count > 3 ? ' …' : ''}`,
+      ...(P.count > FLEX_LIMIT ? [h('div', null, `${FLEX_LIMIT.toLocaleString()}개가 넘으면 앞부분만 써요. 요일이나 시간대를 줄여 주세요.`)] : []));
+  };
+  const card = h('div', {class:'card'},
+    h('label', {class:'row', style:{cursor:'pointer'}},
+      h('input', {type:'checkbox', checked:on, onChange:e => {
+        if (e.target.checked) a.flex = Object.assign({days:[...WEEKDAYS], slots:[{start:'', end:''}], perWeek: num(a.weeklyCount, 1) || 1}, a.flex || {}, {enabled:true});
+        else if (a.flex) a.flex.enabled = false;
+        if (state.locks[a.id] && String(state.locks[a.id]).startsWith(a.id + '~')) delete state.locks[a.id];
+        save(); rerender();
+      }}),
+      h('h3', {style:{margin:0}}, '요일·시간 자동 조합'),
+      h('span', {class:'muted', style:{fontSize:'13px'}}, '시간대가 많은 학원 (예: 월~금 매일 17:00, 19:00 반)')),
+    on ? h('div', {style:{marginTop:'12px'}},
+      h('div', {class:'grid', style:{gridTemplateColumns:'minmax(0,1fr)'}},
+        field('수업 가능한 요일', daysCheck(f.days, paint)),
+        field('주당 수업 횟수', numIn(f.perWeek, v => { f.perWeek = v; paint(); }, {min:1, max:6, style:{maxWidth:'120px'}}), '이 요일들 중 며칠을 다닐지'),
+        h('div', {class:'field'}, h('span', {class:'lbl'}, '시간대 (그날 이 중 하나를 골라요)'),
+          f.slots.map((s, i) => h('div', {class:'slot-row'},
+            h('span', {class:'slot-no'}, `${i + 1}부`),
+            tim(s.start, v => { s.start = v; paint(); }, {'aria-label':'시작'}), tim(s.end, v => { s.end = v; paint(); }, {'aria-label':'끝'}),
+            h('button', {class:'btn icon danger', 'aria-label':'시간대 삭제', onClick:() => { f.slots.splice(i, 1); save(); rerender(); }}, '✕'))),
+          h('div', null, h('button', {class:'btn small', style:{marginTop:'6px'}, onClick:() => { f.slots.push({start:'', end:''}); save(); rerender(); }}, '+ 시간대 추가')))),
+      preview) : null);
+  if (on) paint();
+  return card;
+}
+function shuttleEditor(a){
+  const routes = state.shuttleRoutes.filter(r => r.academyId === a.id);
+  const placeOpts = () => [['', '장소 선택…'], ...placeList().map(p => [p.id, (p.kind === 'school' ? '🏫 ' : p.kind === 'home' ? '🏠 ' : p.kind === 'academy' ? '📘 ' : '🚏 ') + p.name])];
+  const addRoute = dir => {
+    state.shuttleRoutes.push({id:uid('r'), academyId:a.id, name:(dir === 'inbound' ? '등원 ' : '하원 ') + (routes.filter(r => r.direction === dir).length + 1) + '호차', direction:dir, days:[...WEEKDAYS],
+      stops: dir === 'inbound' ? [{placeId:'school', time:''}, {placeId:a.id, time:''}] : [{placeId:a.id, time:''}, {placeId:'home', time:''}]});
+    save(); rerender();
+  };
+  return h('div', {class:'card'},
+    h('div', {class:'row'}, h('h3', {style:{margin:0}}, `🚌 셔틀 노선 · ${routes.length}개`), h('span', {class:'spacer'}),
+      h('button', {class:'btn small', onClick:() => addRoute('inbound')}, '+ 등원 노선'),
+      h('button', {class:'btn small', onClick:() => addRoute('outbound')}, '+ 하원 노선')),
+    h('p', {class:'muted', style:{fontSize:'13px'}}, `등원: 정류장 → 이 학원 / 하원: 이 학원 → 정류장. 정류장에는 셔틀 시각 ${state.settings.shuttleBufferMinutes}분 전까지 도착해야 하고, 내린 뒤에도 ${state.settings.shuttleBufferMinutes}분 여유를 둬요. 셔틀이 서는 별도 장소는 '정류장' 탭에서 먼저 만드세요.`),
+    routes.length ? routes.map(r => h('div', {class:'opt'},
+      h('div', {class:'route-head'},
+        field('노선명', txt(r.name, v => r.name = v)),
+        field('방향', sel(r.direction, [['inbound', '등원 (→학원)'], ['outbound', '하원 (학원→)']], v => { r.direction = v; save(); rerender(); })),
+        h('button', {class:'btn small danger', onClick:() => { if (!confirm(`'${r.name}' 노선을 삭제할까요?`)) return; state.shuttleRoutes = state.shuttleRoutes.filter(x => x.id !== r.id); save(); rerender(); }}, '노선 삭제')),
+      h('div', {style:{marginTop:'10px'}}, field('운행 요일', daysCheck(r.days))),
+      h('div', {style:{marginTop:'10px'}}, h('span', {class:'muted', style:{fontSize:'13px', fontWeight:600}}, '정류장 (운행 순서대로)')),
+      r.stops.map((s, si) => h('div', {class:'stop-row'},
+        h('span', {class:'idx'}, si + 1),
+        sel(s.placeId, placeOpts(), v => { s.placeId = v; save(); }, {'aria-label':'정류장'}),
+        tim(s.time, v => s.time = v, {'aria-label':'시각'}),
+        h('div', {class:'row ctl', style:{flexWrap:'nowrap', gap:'4px'}},
+          h('button', {class:'btn icon small', 'aria-label':'위로', disabled:si === 0, onClick:() => { r.stops.splice(si - 1, 0, r.stops.splice(si, 1)[0]); save(); rerender(); }}, '↑'),
+          h('button', {class:'btn icon small', 'aria-label':'아래로', disabled:si === r.stops.length - 1, onClick:() => { r.stops.splice(si + 1, 0, r.stops.splice(si, 1)[0]); save(); rerender(); }}, '↓'),
+          h('button', {class:'btn icon small danger', 'aria-label':'정류장 삭제', onClick:() => { r.stops.splice(si, 1); save(); rerender(); }}, '✕')))),
+      h('div', {class:'row', style:{marginTop:'8px'}},
+        h('button', {class:'btn small', onClick:() => { r.stops.push({placeId:'', time:''}); save(); rerender(); }}, '+ 정류장 추가'),
+        routeCheck(r, a)))) : h('div', {class:'muted', style:{fontSize:'14px'}}, '노선이 없어요. 위 버튼으로 추가하세요.'));
+}
+function routeCheck(r, a){
+  const ts = r.stops.map(s => toMin(s.time));
+  const msgs = [];
+  if (r.stops.some(s => !s.placeId)) msgs.push('장소 미선택');
+  if (ts.some(t => t == null)) msgs.push('시각 미입력');
+  for (let i = 1; i < ts.length; i++) if (ts[i] != null && ts[i-1] != null && ts[i] <= ts[i-1]) { msgs.push('시각이 순서대로가 아님'); break; }
+  if (!r.stops.some(s => s.placeId === a.id)) msgs.push(r.direction === 'inbound' ? '도착 정류장에 이 학원이 없음 (마지막 정류장에서 걸어감)' : '출발 정류장에 이 학원이 없음');
+  if (!r.days.length) msgs.push('운행 요일 없음');
+  return msgs.length ? h('span', {class:'badge red'}, '⚠ ' + msgs.join(' · ')) : h('span', {class:'badge green'}, '✓ 노선 정상');
+}
+
+// ---------- 3. 정류장 ----------
+function viewStops(){
+  return h('section', null,
+    h('div', {class:'row', style:{marginBottom:'14px'}},
+      h('div', null, h('h2', null, '정류장'), h('p', {class:'sub', style:{margin:0}}, '학교·집·학원이 아닌 셔틀 승하차 장소예요. 예: OO아파트 정문')),
+      h('span', {class:'spacer'}),
+      h('button', {class:'btn primary', onClick:() => { state.places.push({id:uid('p'), name:'', address:''}); save(); rerender(); }}, '+ 정류장 추가')),
+    state.places.length ? state.places.map((p, i) => {
+      const used = state.shuttleRoutes.filter(r => r.stops.some(s => s.placeId === p.id));
+      return h('div', {class:'card'},
+        h('div', {class:'grid g2'},
+          field('이름', txt(p.name, v => p.name = v, {placeholder:'예: OO아파트 정문'})),
+          field('주소', h('div', {class:'row', style:{flexWrap:'nowrap'}}, txt(p.address, v => p.address = v),
+            h('a', {class:'btn small', href:naverSearch(p, p.name), target:'_blank', rel:'noopener', onClick:e => { e.currentTarget.href = naverSearch(p, p.name); }}, '지도')))),
+        h('div', {style:{marginTop:'10px'}}, coordFields(p)),
+        h('div', {class:'row', style:{marginTop:'10px'}},
+          used.length ? h('span', {class:'badge orange'}, '사용 중: ' + used.map(r => r.name).join(', ')) : h('span', {class:'badge'}, '사용하는 노선 없음'),
+          h('span', {class:'spacer'}),
+          h('button', {class:'btn small danger', onClick:() => {
+            if (!confirm(`'${p.name || '정류장'}'을(를) 삭제할까요?` + (used.length ? ` 노선 ${used.length}개에서도 빠집니다.` : ''))) return;
+            state.places.splice(i, 1);
+            for (const r of state.shuttleRoutes) r.stops = r.stops.filter(s => s.placeId !== p.id);
+            for (const k of Object.keys(state.travelMatrix)) if (k.split('>').includes(p.id)) delete state.travelMatrix[k];
+            save(); rerender();
+          }}, '삭제')));
+    }) : h('div', {class:'card empty'}, '정류장이 없어요. 셔틀이 학교·집·학원에서만 선다면 만들지 않아도 돼요.'));
+}
+
+// ---------- 4. 이동 시간 ----------
+function viewTravel(){
+  const pairs = neededPairs();
+  const isMissing = ([a, b]) => { const e = state.travelMatrix[pairKey(a.id, b.id)]; return !e || e.walkMin === '' || e.walkMin == null; };
+  const missingCount = pairs.filter(isMissing).length;
+  const counter = h('span', null);
+  const updateCounter = () => {
+    const n = pairs.filter(isMissing).length;
+    counter.replaceChildren(n ? h('span', {class:'badge red'}, `빈칸 ${n}개`) : h('span', {class:'badge green'}, '✓ 모두 입력됨'), ' ', h('span', {class:'muted', style:{fontSize:'13px'}}, `전체 ${pairs.length}개 구간`));
+  };
+  updateCounter();
+  const fileIn = h('input', {type:'file', accept:'.json,application/json', style:{display:'none'}, onChange:e => { const f = e.target.files[0]; if (f) readJson(f, importTravel); e.target.value = ''; }});
+  const shown = ui.travelOnlyMissing ? pairs.filter(isMissing) : pairs;
+  void missingCount;
+  return h('section', null,
+    h('h2', null, '이동 시간'), h('p', {class:'sub'}, '장소끼리 걸어서 몇 분인지 입력해요. 왕복은 같은 시간으로 계산해요.'),
+    h('div', {class:'card'},
+      h('div', {class:'row'}, counter, h('span', {class:'spacer'}),
+        h('label', {class:'row', style:{gap:'6px', cursor:'pointer', fontSize:'14px'}}, h('input', {type:'checkbox', checked:ui.travelOnlyMissing, onChange:e => { ui.travelOnlyMissing = e.target.checked; saveUi(); rerender(); }}), '빈칸만 보기')),
+      h('div', {class:'row', style:{marginTop:'12px'}},
+        h('button', {class:'btn', onClick:showPlaceListForClaude}, '📋 장소 목록 복사 (Claude에게 검색 부탁)'),
+        h('button', {class:'btn', onClick:() => fileIn.click()}, '📥 이동 시간 가져오기'), fileIn),
+      h('p', {class:'muted', style:{fontSize:'13px', margin:'10px 0 0'}}, 'Claude가 네이버 지도에서 검색해 만든 travel-times.json을 가져오면 빈칸이 채워져요. 직접 입력한 값은 물어본 뒤에만 바뀌어요.')),
+    pairs.length ? h('div', {class:'card'}, shown.length ? shown.map(([a, b]) => {
+      const k = pairKey(a.id, b.id);
+      const e = state.travelMatrix[k];
+      const row = h('div', {class:'pair' + (isMissing([a, b]) ? ' missing' : '')});
+      const srcBadge = h('span', {class:'src'});
+      const paintSrc = () => {
+        const cur = state.travelMatrix[k];
+        srcBadge.replaceChildren(!cur ? h('span', {class:'badge'}, '미입력') : cur.source === 'naver' ? h('span', {class:'badge green', title:'Claude가 네이버 지도에서 검색'}, '네이버 지도') : h('span', {class:'badge blue'}, '직접 입력'),
+          cur && cur.distanceM ? h('span', {class:'muted', style:{fontSize:'12px', marginLeft:'4px'}}, `${cur.distanceM}m`) : null);
+      };
+      paintSrc();
+      row.append(
+        h('div', {class:'names'}, a.name, h('span', {class:'arrow'}, '↔'), b.name),
+        h('div', {class:'min'}, h('input', {type:'number', min:0, inputmode:'numeric', 'aria-label':`${a.name}와 ${b.name} 도보 시간(분)`, value:e && e.walkMin != null ? e.walkMin : '', onInput:ev => {
+          const v = ev.target.value;
+          if (v === '') delete state.travelMatrix[k];
+          else state.travelMatrix[k] = {walkMin:Number(v), distanceM:undefined, source:'manual'};
+          row.classList.toggle('missing', v === '');
+          paintSrc(); updateCounter(); save();
+        }}), h('span', {class:'muted'}, '분')),
+        srcBadge,
+        h('a', {class:'btn small map', href:naverLink(a, b), target:'_blank', rel:'noopener', title:'네이버 지도 도보 길찾기'}, '네이버 지도'));
+      return row;
+    }) : h('div', {class:'empty'}, '빈칸이 없어요 🎉')) : h('div', {class:'card empty'}, '학원을 먼저 등록하세요.'));
+}
+function placeListText(){
+  const pl = placeList();
+  const lines = [
+    '아래 장소들의 위치(위도/경도)와 장소끼리 도보 시간을 네이버 지도에서 검색해서 travel-times.json 파일로 만들어 줘.',
+    '형식: {"places":[{"id":"...","name":"...","lat":37.0,"lng":127.0}],"pairs":[{"from":"id","to":"id","walkMin":12,"distanceM":820}]}',
+    '', '[장소]'];
+  for (const p of pl) lines.push(`- id: ${p.id} | 이름: ${p.name} | 주소: ${(p.obj && p.obj.address) || '(주소 없음)'}`);
+  lines.push('', '[필요한 구간]');
+  for (const [a, b] of neededPairs()) lines.push(`- ${a.id} ↔ ${b.id}  (${a.name} ↔ ${b.name})`);
+  return lines.join('\n');
+}
+function showPlaceListForClaude(){
+  const text = placeListText();
+  const ta = h('textarea', {readonly:true, value:text});
+  modal('Claude에게 보낼 장소 목록', [h('p', {class:'muted', style:{fontSize:'13px', marginTop:0}}, '아래 내용을 복사해서 Claude에게 보내세요. 받은 travel-times.json을 "이동 시간 가져오기"로 불러오면 돼요.'), ta],
+    close => [h('button', {class:'btn', onClick:close}, '닫기'), h('button', {class:'btn primary', onClick:async () => {
+      try { await navigator.clipboard.writeText(text); toast('복사했어요'); }
+      catch (e) { ta.select(); document.execCommand('copy'); toast('복사했어요'); }
+    }}, '복사')]);
+  setTimeout(() => ta.select(), 50);
+}
+function readJson(file, cb){
+  const fr = new FileReader();
+  fr.onload = () => { let d; try { d = JSON.parse(fr.result); } catch (e) { toast('JSON 파일을 읽을 수 없어요'); return; } cb(d); };
+  fr.readAsText(file);
+}
+function importTravel(d){
+  if (!d || typeof d !== 'object') { toast('형식이 올바르지 않아요'); return; }
+  const pl = placeList();
+  const resolve = ref => {
+    if (ref == null) return null;
+    const r = String(ref).trim();
+    const byId = pl.find(p => p.id === r); if (byId) return byId;
+    return pl.find(p => p.name.trim() === r) || null;
+  };
+  let coords = 0;
+  for (const p of (Array.isArray(d.places) ? d.places : [])) {
+    const t = resolve(p.id) || resolve(p.name);
+    if (t && typeof p.lat === 'number' && typeof p.lng === 'number') { t.obj.lat = p.lat; t.obj.lng = p.lng; coords++; }
+  }
+  const entries = [];
+  if (Array.isArray(d.pairs)) for (const x of d.pairs) entries.push([x.from, x.to, x.walkMin, x.distanceM]);
+  if (d.travelMatrix && typeof d.travelMatrix === 'object') for (const [k, v] of Object.entries(d.travelMatrix)) { const [f, t] = k.split('>'); entries.push([f, t, v && v.walkMin, v && v.distanceM]); }
+  const ready = [], unknown = [];
+  for (const [f, t, w, dm] of entries) {
+    const A = resolve(f), Bp = resolve(t);
+    if (!A || !Bp || A.id === Bp.id || w == null || isNaN(Number(w))) { unknown.push(`${f}↔${t}`); continue; }
+    ready.push({k:pairKey(A.id, Bp.id), v:{walkMin:Math.round(Number(w)), distanceM: dm != null && !isNaN(Number(dm)) ? Math.round(Number(dm)) : undefined, source:'naver', fetchedAt:new Date().toISOString()}});
+  }
+  const conflicts = ready.filter(x => { const e = state.travelMatrix[x.k]; return e && e.source === 'manual' && e.walkMin !== '' && e.walkMin != null && Number(e.walkMin) !== x.v.walkMin; });
+  const overwrite = conflicts.length ? confirm(`직접 입력한 구간 ${conflicts.length}개가 가져온 값과 달라요. 가져온 값으로 덮어쓸까요?\n(취소하면 직접 입력한 값을 유지해요)`) : false;
+  let applied = 0, kept = 0;
+  for (const x of ready) {
+    const e = state.travelMatrix[x.k];
+    if (e && e.source === 'manual' && e.walkMin != null && e.walkMin !== '' && !overwrite) { kept++; continue; }
+    state.travelMatrix[x.k] = x.v; applied++;
+  }
+  save(); rerender();
+  toast(`구간 ${applied}개 반영` + (kept ? `, 직접 입력 ${kept}개 유지` : '') + (coords ? `, 좌표 ${coords}곳` : '') + (unknown.length ? `, 알 수 없는 구간 ${unknown.length}개 건너뜀` : ''));
+}
+
+// ---------- 5. 스케줄 ----------
+function viewSchedule(){
+  const res = ui.results;
+  const wrap = h('section', null,
+    h('h2', null, '스케줄'), h('p', {class:'sub'}, '학원마다 반 하나를 골라 이동이 가장 효율적인 주간 시간표를 만들어요.'));
+  // 확정된 스케줄
+  const cs = state.confirmedSchedule;
+  if (cs && cs.selection && Object.keys(cs.selection).length) {
+    const ev = evaluateSelection(state, cs.selection);
+    wrap.append(h('div', {class:'card', style:{borderColor:'var(--ok)'}},
+      h('div', {class:'row'}, h('h3', {style:{margin:0}}, '✅ 확정된 스케줄'), h('span', {class:'muted', style:{fontSize:'13px'}}, new Date(cs.createdAt).toLocaleString('ko-KR')), h('span', {class:'spacer'}),
+        h('button', {class:'btn small no-print', onClick:() => window.print()}, '인쇄'),
+        h('button', {class:'btn small danger no-print', onClick:() => { if (!confirm('확정을 해제할까요?')) return; state.confirmedSchedule = null; save(false); rerender(); }}, '확정 해제')),
+      ev.issues.length ? h('div', {class:'notice err', style:{marginTop:'12px'}}, '현재 데이터로 다시 확인해 보니 문제가 있어요:', h('ul', null, ev.issues.map(m => h('li', null, m)))) : null,
+      ev.plan ? h('div', {style:{marginTop:'12px'}}, planView(ev.plan, 'c')) : null));
+  }
+  // 반 고정
+  const lockCard = h('div', {class:'card no-print'},
+    h('details', {open: Object.keys(state.locks).length > 0 || null}, h('summary', null, `반 고정 (${Object.keys(state.locks).length}곳 고정됨)`),
+      h('p', {class:'muted', style:{fontSize:'13px'}}, '이미 다니고 있어서 바꿀 수 없는 반은 고정하세요. 나머지 학원만 다시 최적화해요.'),
+      state.academies.map(a => h('div', {class:'lock-row'}, h('span', null, h('i', {style:{display:'inline-block', width:'10px', height:'10px', borderRadius:'50%', background:a.color, marginRight:'6px'}}), a.name || '(이름 없음)'),
+        sel(state.locks[a.id] || '', [['', '자동 선택'], ...academyOptions(a).map(o => [o.id, '고정: ' + (o.generated ? optSummary(o) : (o.label || '반') + ' (' + optSummary(o) + ')')])], v => { if (v) state.locks[a.id] = v; else delete state.locks[a.id]; save(); rerender(); })))));
+  wrap.append(lockCard,
+    h('div', {class:'row no-print', style:{marginBottom:'14px'}},
+      h('button', {class:'btn primary big', onClick:runSolve}, res ? '🔄 다시 짜기' : '✨ 스케줄 짜기'),
+      res ? h('span', {class:'muted', style:{fontSize:'13px'}}, `조합 ${res.leaves != null ? res.leaves.toLocaleString() : 0}개 확인 · ${res.ms}ms`) : null));
+  if (res && ui.stale) wrap.append(h('div', {class:'notice warn'}, '데이터가 바뀌었어요. "다시 짜기"를 눌러 최신 결과를 확인하세요.'));
+  if (!res) return wrap;
+  if (res.warnings.length) wrap.append(h('div', {class:'notice warn'}, h('b', null, '확인해 주세요'), h('ul', null, res.warnings.map(m => h('li', null, m)))));
+  if (!res.ok) {
+    wrap.append(h('div', {class:'notice err'}, h('b', null, '조건을 모두 만족하는 스케줄이 없어요'), h('ul', null, res.problems.map(m => h('li', null, m)))));
+    return wrap;
+  }
+  const idx = Math.min(ui.planIdx, res.plans.length - 1);
+  const plan = res.plans[idx];
+  wrap.append(h('div', {class:'card'},
+    h('div', {class:'plan-tabs', role:'tablist'}, res.plans.map((p, i) => h('button', {role:'tab', 'aria-selected':String(i === idx), onClick:() => { ui.planIdx = i; rerender(); }}, `${i + 1}안` + (i === 0 ? ' · 추천' : ''), h('span', {class:'muted', style:{fontWeight:500, marginLeft:'6px', fontSize:'12px'}}, `점수 ${Math.round(p.cost)}`)))),
+    planView(plan, 'r'),
+    h('div', {class:'row end no-print', style:{marginTop:'14px'}},
+      h('button', {class:'btn primary', onClick:() => {
+        const selection = {}; for (const p of plan.picks) selection[p.acadId] = p.optId;
+        state.confirmedSchedule = {createdAt:new Date().toISOString(), selection};
+        save(false); toast(`${idx + 1}안으로 확정했어요`); rerender(); window.scrollTo(0, 0);
+      }}, `${idx + 1}안으로 확정`))));
+  return wrap;
+}
+function runSolve(){
+  flush();
+  ui.results = solve(state);
+  ui.planIdx = 0; ui.stale = false;
+  rerender();
+}
+function planView(plan, scope){
+  const acad = id => state.academies.find(a => a.id === id) || {name:id, color:'#888'};
+  const days = plan.days;
+  const homes = DAYS.map(d => [d, days[d] && days[d].home]);
+  return h('div', null,
+    h('div', {class:'stats'},
+      stat('총 이동 시간', dur(plan.travel)), stat('총 대기 시간', dur(plan.wait)), stat('걷는 시간', dur(plan.walk)), stat('셔틀 이용', plan.shuttle + '회')),
+    h('div', {class:'stats'}, homes.map(([d, t]) => stat(DAY_KO[d] + ' 귀가', t != null ? fmt(t) : '수업 없음'))),
+    h('div', {class:'chips'}, plan.picks.map(p => { const a = acad(p.acadId); const o = a.id ? academyOptions(a).find(x => x.id === p.optId) : null;
+      return h('span', {class:'chip'}, h('i', {style:{background:a.color}}), h('b', null, a.name), ' ', o && o.generated ? optSummary(o) : p.label, o && !o.generated ? h('span', {class:'muted'}, ' · ' + optSummary(o)) : null); })),
+    weekGrid(plan, acad),
+    dayTimeline(plan, acad, scope));
+}
+function stat(k, v){ return h('div', {class:'stat'}, h('div', {class:'k'}, k), h('div', {class:'v'}, v)); }
+function weekGrid(plan, acad){
+  let lo = Infinity, hi = -Infinity;
+  for (const d of DAYS) {
+    const r = plan.days[d];
+    if (r && r.segs.length) for (const s of r.segs) { lo = Math.min(lo, s.start); hi = Math.max(hi, s.end); }
+  }
+  if (!isFinite(lo)) { lo = 13 * 60; hi = 19 * 60; }
+  lo = Math.floor(lo / 60) * 60; hi = Math.max(lo + 180, Math.ceil((hi + 20) / 60) * 60);
+  const PPM = 1.15, H = (hi - lo) * PPM;
+  const axis = h('div', {class:'axis', style:{height:H + 'px'}});
+  for (let m = lo; m <= hi; m += 60) axis.append(h('span', {style:{top:((m - lo) * PPM) + 'px'}}, fmt(m)));
+  const grid = `repeating-linear-gradient(to bottom, var(--line) 0 1px, transparent 1px ${60 * PPM}px)`;
+  const cols = DAYS.map(d => {
+    const col = h('div', {class:'col', style:{height:H + 'px', backgroundImage:grid}});
+    const r = plan.days[d];
+    if (r) for (const s of r.segs) {
+      const top = (s.start - lo) * PPM, height = Math.max((s.end - s.start) * PPM, 0);
+      if (s.type === 'event') { col.append(h('div', {class:'blk event', style:{top:top + 'px'}}, h('span', null, `${s.text.replace(/ (하교|도착|출발 가능|출발)$/, '')} ${fmt(s.start)}`))); continue; }
+      if (height < 1) continue;
+      if (s.type === 'class') {
+        const a = acad(s.acadId);
+        col.append(h('div', {class:'blk class', title:`${s.text} ${fmt(s.start)}~${fmt(s.end)}`, style:{top:top + 'px', height:height + 'px', background:a.color}}, a.name, h('small', null, `${s.label} · ${fmt(s.start)}~${fmt(s.end)}`)));
+      } else if (s.type === 'walk' || s.type === 'shuttle') {
+        col.append(h('div', {class:'blk ' + s.type, title:`${fmt(s.start)}~${fmt(s.end)} ${s.text}`, style:{top:top + 'px', height:height + 'px'}}, height >= 13 ? (s.type === 'walk' ? '🚶 ' : '🚌 ') + (s.end - s.start) + '분' : ''));
+      } else if (s.type === 'wait') {
+        col.append(h('div', {class:'blk wait', title:`${fmt(s.start)}~${fmt(s.end)} ${s.text}`, style:{top:top + 'px', height:height + 'px'}}));
+      }
+    }
+    return col;
+  });
+  return h('div', {class:'week-wrap'}, h('div', {class:'week'},
+    h('div', {class:'hd'}), ...DAYS.map(d => h('div', {class:'hd'}, DAY_KO[d], h('small', null, plan.days[d] && plan.days[d].classes ? `수업 ${plan.days[d].classes}개` : '수업 없음'))),
+    axis, ...cols));
+}
+function dayTimeline(plan, acad, scope){
+  const key = 'day_' + scope;
+  const cur = ui[key] || ui.day || 'mon';
+  const r = plan.days[cur];
+  const icons = {walk:'🚶', shuttle:'🚌', wait:'⏳', class:'📘', event:'📍'};
+  return h('div', null,
+    h('div', {class:'day-pick', role:'tablist', 'aria-label':'요일 선택'}, DAYS.map(d => h('button', {role:'tab', 'aria-selected':String(d === cur), onClick:() => { ui[key] = d; rerender(); }}, DAY_KO[d]))),
+    !r || !r.segs.length ? h('div', {class:'empty'}, cur === 'sat' ? '토요일은 학원 수업이 없어요.' : `${DAY_KO[cur]}요일은 학원 수업이 없어요. 하교 후 바로 귀가해요.`) :
+    h('ul', {class:'tl'}, r.segs.filter(s => s.type !== 'wait' || s.end > s.start).map(s => {
+      const a = s.type === 'class' ? acad(s.acadId) : null;
+      return h('li', {class:s.type},
+        h('span', {class:'t'}, s.type === 'event' ? fmt(s.start) : `${fmt(s.start)}–${fmt(s.end)}`),
+        h('span', {class:'ic ' + s.type, style:a ? {background:a.color} : null}, icons[s.type]),
+        h('span', {class:'x'}, s.type === 'class' ? h('b', null, s.text) : s.text));
+    })));
+}
+
+// ---------- 6. 데이터 ----------
+function viewData(){
+  const fileIn = h('input', {type:'file', accept:'.json,application/json', style:{display:'none'}, onChange:e => { const f = e.target.files[0]; if (f) readJson(f, importAll); e.target.value = ''; }});
+  let size = 0; try { size = (localStorage.getItem(KEY) || '').length; } catch (e) {}
+  return h('section', null,
+    h('h2', null, '데이터'), h('p', {class:'sub'}, `데이터는 이 브라우저에만 저장돼요 (현재 ${(size / 1024).toFixed(1)}KB). 파일을 옮기거나 다른 브라우저로 열 땐 백업 파일을 쓰세요.`),
+    h('div', {class:'card'},
+      h('h3', null, '백업'),
+      h('div', {class:'row'},
+        h('button', {class:'btn primary', onClick:exportAll}, '📤 JSON 내보내기'),
+        h('button', {class:'btn', onClick:() => fileIn.click()}, '📥 JSON 가져오기 (전체 교체)'), fileIn)),
+    h('div', {class:'card'},
+      h('h3', null, '체험 / 초기화'),
+      h('div', {class:'row'},
+        h('button', {class:'btn', onClick:loadSample}, '예시 데이터 불러오기'),
+        h('button', {class:'btn danger', onClick:() => {
+          if (!confirm('모든 데이터를 지울까요? 되돌릴 수 없어요. 먼저 JSON으로 내보내는 걸 권해요.')) return;
+          state = defaultState(); ui.results = null; ui.editing = null; flush(); render(); toast('초기화했어요');
+        }}, '전체 초기화'))));
+}
+function exportAll(){
+  flush();
+  const blob = new Blob([JSON.stringify(state, null, 2)], {type:'application/json'});
+  const d = new Date();
+  const name = `afterschool-backup-${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}.json`;
+  const a = h('a', {href:URL.createObjectURL(blob), download:name});
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast('백업 파일을 저장했어요');
+}
+function importAll(d){
+  if (!d || typeof d !== 'object' || !d.settings) { toast('이 앱의 백업 파일이 아니에요'); return; }
+  if (!confirm('지금 데이터를 모두 지우고 백업 파일 내용으로 바꿀까요?')) return;
+  state = migrate(d); ui.results = null; ui.editing = null; flush(); render(); toast('복원했어요');
+}
+function loadSample(){
+  const hasData = state.academies.length || state.settings.school.address;
+  if (hasData && !confirm('지금 데이터를 예시 데이터로 바꿀까요?')) return;
+  state = sampleState(); ui.results = null; ui.editing = null; flush(); ui.tab = 'schedule'; saveUi(); render(); toast('예시 데이터를 불러왔어요');
+}
+
+// ================= BOOT =================
+(function boot(){
+  try { localStorage.setItem('__t', '1'); localStorage.removeItem('__t'); } catch (e) { storageOk = false; }
+  setStatus(storageOk ? '✓ 저장됨' : '⚠ 저장 불가', !storageOk);
+  render();
+})();
+</script>
+</body>
+</html>
